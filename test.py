@@ -9,7 +9,7 @@ import sys  # we'll need this later to run our Qt application
 
 from OpenGL.arrays import vbo
 import numpy as np
-
+import math
 from DrawableObject import DrawableObject
 
 class GLWidget(QtOpenGL.QGLWidget):
@@ -72,10 +72,14 @@ class GLWidget(QtOpenGL.QGLWidget):
         if self.target is not None:
             gl.glPopMatrix()
             gl.glPushMatrix()
-            gl.glTranslate(*self.target.location)
-            gl.glRotatef(self.rotX, 1.0, 0.0, 0.0)
-            gl.glRotatef(self.rotY, 0.0, 1.0, 0.0)
-            gl.glTranslate(*(self.target.location * -1))
+            x, y, z = self.target.location
+            theta = self.rotY / 180 * math.pi
+            phi = self.rotX / 180 * math.pi
+            camX = x + self.armLength * math.sin(theta) * math.cos(phi)
+            camZ = z + self.armLength * math.sin(theta) * math.sin(phi)
+            camY = y + self.armLength * math.cos(theta)
+            GLU.gluLookAt(camX, camY, camZ, x, y, z, 0.0, 1.0, 0.0)
+            print(camX, camY, camZ)
 
 
 

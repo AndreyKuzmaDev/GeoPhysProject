@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c739edcd-44b1-4ac4-b07c-9abfb72d4a03" name="Changes" comment="Two spinning cubes! Started writing DrawableObject class">
+    <list default="true" id="c739edcd-44b1-4ac4-b07c-9abfb72d4a03" name="Changes" comment="Camera rotation kinda works">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
     </list>
@@ -94,7 +94,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1751556470765</updated>
-      <workItem from="1751556472126" duration="11270000" />
+      <workItem from="1751556472126" duration="14434000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit. Added requirements.txt and test script">
       <option name="closed" value="true" />
@@ -112,7 +112,15 @@
       <option name="project" value="LOCAL" />
       <updated>1751564959261</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Camera rotation kinda works">
+      <option name="closed" value="true" />
+      <created>1751571062660</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1751571062660</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -121,9 +129,10 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit. Added requirements.txt and test script" />
     <MESSAGE value="Two spinning cubes! Started writing DrawableObject class" />
-    <option name="LAST_COMMIT_MESSAGE" value="Two spinning cubes! Started writing DrawableObject class" />
+    <MESSAGE value="Camera rotation kinda works" />
+    <option name="LAST_COMMIT_MESSAGE" value="Camera rotation kinda works" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/GeoPhysProject$test.coverage" NAME="test Coverage Results" MODIFIED="1751570855355" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/GeoPhysProject$test.coverage" NAME="test Coverage Results" MODIFIED="1751578389271" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
