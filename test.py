@@ -15,17 +15,19 @@ from DrawableObject import DrawableObject
 class GLWidget(QtOpenGL.QGLWidget):
     def __init__(self, parent=None):
         self.parent = parent
+        self.target = None
+        self.armLength = 20
+        self.rotX = 0
+        self.rotY = 0
         QtOpenGL.QGLWidget.__init__(self, parent)
 
     def initializeGL(self):
-        self.qglClearColor(QtGui.QColor(0, 0, 255))  # initialize the screen to blue
+        self.qglClearColor(QtGui.QColor(135, 206, 235))  # initialize the screen to blue
         gl.glEnable(gl.GL_DEPTH_TEST)  # enable depth testing
 
         self.initGeometry()
+        gl.glPushMatrix()
 
-        self.rotX = 0.0
-        self.rotY = 0.0
-        self.rotZ = 0.0
 
     def resizeGL(self, width, height):
         gl.glViewport(0, 0, width, height)
@@ -33,14 +35,14 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glLoadIdentity()
         aspect = width / float(height)
 
-        GLU.gluPerspective(45.0, aspect, 1.0, 100.0)
+        GLU.gluPerspective(45.0, aspect, 1.0, 500.0)
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
 
     def draw_object(self, drawable):
         gl.glPushMatrix()
 
-        gl.glTranslate(*(drawable.location * -1))
+        gl.glTranslate(*drawable.location)
         gl.glRotatef(drawable.rotation[0], 1.0, 0.0, 0.0)
         gl.glRotatef(drawable.rotation[1], 0.0, 1.0, 0.0)
         gl.glRotatef(drawable.rotation[2], 0.0, 0.0, 1.0)
@@ -63,8 +65,18 @@ class GLWidget(QtOpenGL.QGLWidget):
 
     def paintGL(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+
         for obj in self.objects:
             self.draw_object(obj)
+
+        if self.target is not None:
+            gl.glPopMatrix()
+            gl.glPushMatrix()
+            gl.glTranslate(*self.target.location)
+            gl.glRotatef(self.rotX, 1.0, 0.0, 0.0)
+            gl.glRotatef(self.rotY, 0.0, 1.0, 0.0)
+            gl.glTranslate(*(self.target.location * -1))
+
 
 
     def add_cube(self):
@@ -109,25 +121,23 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.objects = []
         self.add_cube()
         self.objects[-1].scale = np.array([10.0, 10.0, 10.0])
-        self.objects[-1].location = np.array([-10.0, 0.0, 50.0])
+        self.objects[-1].location = np.array([-10.0, 0.0, -50.0])
         self.objects[-1].origin = np.array([0.5, 0.5, 0.5])
         self.add_cube()
         self.objects[-1].scale = np.array([10.0, 10.0, 10.0])
-        self.objects[-1].location = np.array([10.0, 0.0, 50.0])
+        self.objects[-1].location = np.array([10.0, 0.0, -50.0])
         self.objects[-1].origin = np.array([0.5, 0.5, 0.5])
+        self.target = self.objects[0]
 
 
     def setRotX(self, val):
-        for obj in self.objects:
-            obj.rotation[0] = np.pi * val
+        self.rotX = np.pi * val
 
     def setRotY(self, val):
-        for obj in self.objects:
-            obj.rotation[1] = np.pi * val
+        self.rotY = np.pi * val
 
-    def setRotZ(self, val):
-        for obj in self.objects:
-            obj.rotation[2] = np.pi * val
+    def setArm(self, val):
+        self.armLength = 20 + val
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -135,8 +145,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)  # call the init for the parent class
 
-        self.resize(300, 300)
-        self.setWindowTitle('Hello OpenGL App')
+        self.resize(800, 600)
+        self.setWindowTitle('OpenGL App')
 
         self.glWidget = GLWidget(self)
         self.initGUI()
@@ -162,7 +172,7 @@ class MainWindow(QtWidgets.QMainWindow):
         sliderY.valueChanged.connect(lambda val: self.glWidget.setRotY(val))
 
         sliderZ = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        sliderZ.valueChanged.connect(lambda val: self.glWidget.setRotZ(val))
+        sliderZ.valueChanged.connect(lambda val: self.glWidget.setArm(val))
 
         gui_layout.addWidget(sliderX)
         gui_layout.addWidget(sliderY)
