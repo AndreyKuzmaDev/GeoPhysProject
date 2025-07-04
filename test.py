@@ -10,7 +10,9 @@ import sys  # we'll need this later to run our Qt application
 from OpenGL.arrays import vbo
 import numpy as np
 
+from AppWindow import MainWindow
 from DrawableObject import DrawableObject
+
 
 class GLWidget(QtOpenGL.QGLWidget):
     def __init__(self, parent=None):
@@ -75,7 +77,7 @@ class GLWidget(QtOpenGL.QGLWidget):
             gl.glTranslate(*self.target.location)
             gl.glRotatef(self.rotX, 1.0, 0.0, 0.0)
             gl.glRotatef(self.rotY, 0.0, 1.0, 0.0)
-            gl.glTranslate(*(self.target.location * -1))
+            gl.glTranslate(*(np.array([0.0, 0.0, self.armLength])))
 
 
 
@@ -120,12 +122,12 @@ class GLWidget(QtOpenGL.QGLWidget):
     def initGeometry(self):
         self.objects = []
         self.add_cube()
-        self.objects[-1].scale = np.array([10.0, 10.0, 10.0])
-        self.objects[-1].location = np.array([-10.0, 0.0, -50.0])
+        self.objects[-1].scale = np.array([1.0, 1.0, 1.0])
+        self.objects[-1].location = np.array([0.0, 0.0, -30.0])
         self.objects[-1].origin = np.array([0.5, 0.5, 0.5])
         self.add_cube()
-        self.objects[-1].scale = np.array([10.0, 10.0, 10.0])
-        self.objects[-1].location = np.array([10.0, 0.0, -50.0])
+        self.objects[-1].scale = np.array([1.0, 1.0, 1.0])
+        self.objects[-1].location = np.array([2.0, 0.0, -30.0])
         self.objects[-1].origin = np.array([0.5, 0.5, 0.5])
         self.target = self.objects[0]
 
@@ -140,50 +142,11 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.armLength = 20 + val
 
 
-class MainWindow(QtWidgets.QMainWindow):
-
-    def __init__(self):
-        QtWidgets.QMainWindow.__init__(self)  # call the init for the parent class
-
-        self.resize(800, 600)
-        self.setWindowTitle('OpenGL App')
-
-        self.glWidget = GLWidget(self)
-        self.initGUI()
-
-        timer = QtCore.QTimer(self)
-        timer.setInterval(20)  # period, in milliseconds
-        timer.timeout.connect(self.glWidget.updateGL)
-        timer.start()
-
-    def initGUI(self):
-        central_widget = QtWidgets.QWidget()
-        gui_layout = QtWidgets.QVBoxLayout()
-        central_widget.setLayout(gui_layout)
-
-        self.setCentralWidget(central_widget)
-
-        gui_layout.addWidget(self.glWidget)
-
-        sliderX = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        sliderX.valueChanged.connect(lambda val: self.glWidget.setRotX(val))
-
-        sliderY = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        sliderY.valueChanged.connect(lambda val: self.glWidget.setRotY(val))
-
-        sliderZ = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        sliderZ.valueChanged.connect(lambda val: self.glWidget.setArm(val))
-
-        gui_layout.addWidget(sliderX)
-        gui_layout.addWidget(sliderY)
-        gui_layout.addWidget(sliderZ)
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-
-    win = MainWindow()
+    win = MainWindow(GLWidget())
     win.show()
 
     sys.exit(app.exec_())
-
