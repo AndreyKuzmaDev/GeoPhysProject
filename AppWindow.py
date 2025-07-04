@@ -44,15 +44,18 @@ class MainWindow(QtWidgets.QMainWindow):
     def initMenu(self):
         fileMenu = self.menuBar.addMenu('Файл')
         optionsMenu = self.menuBar.addMenu('Настройки')
+
         exitAction = QtWidgets.QAction('Выход', self)
         createFileAction = QtWidgets.QAction('Создать файл', self)
         openFileAction = QtWidgets.QAction('Открыть файл', self)
+        changeColorAction = QtWidgets.QAction('Цвета', self)
+
         exitAction.triggered.connect(self.close)
         fileMenu.addAction(createFileAction)
         fileMenu.addAction(openFileAction)
         fileMenu.addAction(exitAction)
 
-        optionsMenu.addAction(exitAction)
+        optionsMenu.addAction(changeColorAction)
 
     def initGUI(self):
         central_widget = QtWidgets.QWidget()
