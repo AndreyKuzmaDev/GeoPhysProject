@@ -56,7 +56,9 @@ def create_cube():
          2, 1, 5, 6,
          0, 3, 7, 4,
          7, 6, 5, 4])
-    obj = DrawableObject(vertVBO, colorVBO, cubeIdxArray, np.array([0.5, 0.5, 0.5]))
+    mesh = ObjectMesh(vertVBO, colorVBO, cubeIdxArray)
+    collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
+    obj = SceneObject(mesh, collision, np.array([0.5, 0.5, 0.5]))
 
     return obj
 
