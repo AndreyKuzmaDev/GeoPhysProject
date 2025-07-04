@@ -8,11 +8,18 @@ from OpenGL import GLU  # OpenGL Utility Library, extends OpenGL functionality
 import sys  # we'll need this later to run our Qt application
 
 from OpenGL.arrays import vbo
+
+from pyglm import glm
+
 import numpy as np
 
 from AppWindow import MainWindow
 import math
-from DrawableObject import DrawableObject
+import sys  # we'll need this later to run our Qt application
+
+from object_meshes import ObjectMesh
+from scene_objects import SceneObject
+from collisions import CollisionBox
 
 
 def create_cube():
@@ -49,7 +56,9 @@ def create_cube():
          2, 1, 5, 6,
          0, 3, 7, 4,
          7, 6, 5, 4])
-    obj = DrawableObject(vertVBO, colorVBO, cubeIdxArray, np.array([0.5, 0.5, 0.5]))
+    mesh = ObjectMesh(vertVBO, colorVBO, cubeIdxArray)
+    collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
+    obj = SceneObject(mesh, collision, np.array([0.5, 0.5, 0.5]))
 
     return obj
 
@@ -57,7 +66,7 @@ def create_cube():
 class GLWidget(QtOpenGL.QGLWidget):
     def __init__(self, parent=None):
         self.parent = parent
-        self.target = None
+
         self.armLength = 20
 
         self.rotX = 0.0
@@ -68,6 +77,10 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.camZ = 0.0
 
         self.objects = []
+        self.picked = None
+        self.target = None
+
+        self.lockPicked = False
 
         QtOpenGL.QGLWidget.__init__(self, parent)
 
@@ -75,7 +88,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.qglClearColor(QtGui.QColor(135, 206, 235))
         gl.glEnable(gl.GL_DEPTH_TEST)
 
-        self.initGeometry()
+        self._init_geometry()
         gl.glPushMatrix()
 
 
@@ -89,58 +102,120 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
 
-    def draw_object(self, drawable):
+    def check_collision(self, direction, obj):
+        tMin = 0.0
+        tMax = 100.0
+        obj_pos = glm.vec3(obj.matrix[3][:3])
+        delta = obj_pos - glm.vec3([self.camX, self.camY, self.camZ])
+        """print(obj_pos)
+        print(glm.vec3([self.camX, self.camY, self.camZ]))
+        print(obj.location)
+        print(direction)
+        print(delta)
+        print()"""
+        pts_beg = [obj.collision.pointBegin.x, obj.collision.pointBegin.y, obj.collision.pointBegin.z]
+        pts_end = [obj.collision.pointEnd.x, obj.collision.pointEnd.y, obj.collision.pointEnd.z]
+        for i in range(3):
+            axis = glm.vec3(obj.matrix[i][:3])
+            e = glm.dot(axis, delta)
+            f = glm.dot(direction, axis)
+
+            if math.fabs(f) > 0:
+                t1 = (e + pts_beg[i]) / f
+                t2 = (e + pts_end[i]) / f
+                if t1 > t2:
+                    t1, t2 = t2, t1
+                if t2 < tMax:
+                    tMax = t2
+                if t1 > tMin:
+                    tMin = t1
+                if tMax < tMin:
+                    return -1.0
+            else:
+                if -e + pts_beg[i] > 0.0 or -e + pts_end[i] < 0.0:
+                    return -1.0
+        return tMin
+
+
+
+    def draw_object(self, obj):
         gl.glPushMatrix()
 
-        gl.glTranslate(*drawable.location)
-        gl.glRotatef(drawable.rotation[0], 1.0, 0.0, 0.0)
-        gl.glRotatef(drawable.rotation[1], 0.0, 1.0, 0.0)
-        gl.glRotatef(drawable.rotation[2], 0.0, 0.0, 1.0)
-        gl.glScale(*drawable.scale)
-        gl.glTranslate(*(drawable.origin * -1))
+        gl.glTranslate(*obj.location)
+        gl.glRotatef(obj.rotation[0], 1.0, 0.0, 0.0)
+        gl.glRotatef(obj.rotation[1], 0.0, 1.0, 0.0)
+        gl.glRotatef(obj.rotation[2], 0.0, 0.0, 1.0)
+        gl.glScale(*obj.scale)
+        gl.glTranslate(*(obj.origin * -1))
 
-        gl.glVertexPointer(3, gl.GL_FLOAT, 0, drawable.verticesVBO)
-        gl.glColorPointer(3, gl.GL_FLOAT, 0, drawable.colorsVBO)
+        if obj.matrix is None:
+            obj.matrix = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
 
-        gl.glDrawElements(gl.GL_QUADS, len(drawable.surfaces), gl.GL_UNSIGNED_INT, drawable.surfaces)
+        gl.glVertexPointer(3, gl.GL_FLOAT, 0, obj.mesh.verticesVBO)
+        gl.glColorPointer(3, gl.GL_FLOAT, 0, obj.mesh.colorsVBO)
 
+        gl.glDrawElements(gl.GL_QUADS, len(obj.mesh.surfaces), gl.GL_UNSIGNED_INT, obj.mesh.surfaces)
         gl.glPopMatrix()
 
 
+    def _compute_camera(self):
+        if self.target is not None:
+            x, y, z = self.target.location
+            self.camX = x + self.armLength * math.sin(self.rotY) * math.cos(self.rotX)
+            self.camY = y + self.armLength * math.cos(self.rotY)
+            self.camZ = z + self.armLength * math.sin(self.rotY) * math.sin(self.rotX)
+
+
+
+    def _position_camera(self):
+        if self.target is not None:
+            x, y, z = self.target.location
+            GLU.gluLookAt(self.camX, self.camY, self.camZ, x, y, z, 0.0, 1.0, 0.0)
+
+
     def paintGL(self):
+
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+
+        self._compute_camera()
 
         gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
         gl.glEnableClientState(gl.GL_COLOR_ARRAY)
 
         for obj in self.objects:
-            if obj.enabled:
-                self.draw_object(obj)
+            if self.objects[obj].enabled and self.objects[obj].mesh.enabled:
+                self.draw_object(self.objects[obj])
 
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
         gl.glDisableClientState(gl.GL_COLOR_ARRAY)
 
-        if self.target is not None:
-            gl.glPopMatrix()
-            gl.glPushMatrix()
-            x, y, z = self.target.location
-            self.camX = x + self.armLength * math.sin(self.rotY) * math.cos(self.rotX)
-            self.camZ = z + self.armLength * math.sin(self.rotY) * math.sin(self.rotX)
-            self.camY = y + self.armLength * math.cos(self.rotY)
-            GLU.gluLookAt(self.camX, self.camY, self.camZ, x, y, z, 0.0, 1.0, 0.0)
+        direction = glm.normalize(glm.vec3(self.target.location) - glm.vec3([self.camX, self.camY, self.camZ]))
+        for obj in self.objects:
+            if self.objects[obj].enabled and self.objects[obj].collision.enabled:
+                if self.check_collision(direction, self.objects[obj]) > 0.0:
+                    print(obj)
+        gl.glPopMatrix()
+        gl.glPushMatrix()
 
-    def initGeometry(self):
+        self._position_camera()
+
+
+    def _init_geometry(self):
         obj1 = create_cube()
         obj1.scale = np.array([10.0, 10.0, 10.0])
         obj1.location = np.array([-10.0, 0.0, -50.0])
 
         obj2 = create_cube()
-        obj2.scale = np.array([10.0, 10.0, 10.0])
+        obj2.scale = np.array([1.0, 1.0, 1.0])
         obj2.location = np.array([10.0, 0.0, -50.0])
-        self.objects = [obj1, obj2]
+        self.objects = {obj1.id : obj1,
+                        obj2.id : obj2}
 
-        self.target = obj1
+        self.target = obj2
 
+
+    def _init_physics(self):
+        pass
 
     def setRotX(self, val):
         self.rotX = math.pi * (val / 180)

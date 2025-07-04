@@ -69,8 +69,13 @@ class MainWindow(QtWidgets.QMainWindow):
         right_layout.addWidget(self.glWidget, 5)
 
         sliderX = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        sliderX.setMinimum(0)
+        sliderX.setMaximum(360)
         sliderX.valueChanged.connect(lambda val: self.glWidget.setRotX(val))
+
         sliderY = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        sliderY.setMinimum(1)
+        sliderY.setMaximum(359)
         sliderY.valueChanged.connect(lambda val: self.glWidget.setRotY(val))
         sliderZ = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         sliderZ.valueChanged.connect(lambda val: self.glWidget.setArm(val))
