@@ -4,6 +4,9 @@ from PyQt5 import QtCore, QtWidgets  # core Qt functionality
 from PyQt5 import QtGui  # extends QtCore with GUI functionality
 from PyQt5 import QtOpenGL
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
+
+
+
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, glWidget):
         super().__init__()
@@ -17,18 +20,39 @@ class MainWindow(QtWidgets.QMainWindow):
         self.menuBar = self.menuBar()
         self.initMenu()
 
-        # Создаём многоуровневый список (QTreeWidget)
-        self.treeWidget = QtWidgets.QTreeWidget()
-        self.treeWidget.setHeaderLabels(['Имя', 'Описание'])
+        self.openProject()
+
+        self.treeView = QtWidgets.QTreeView()
+        self.treeView.setModel(self.model)
 
         self.initGUI()
         self.initTimer()
 
+    def openProject(self):
+        self.model = QtGui.QStandardItemModel()
+        rootNode = self.model.invisibleRootItem()
+
+        self.project = QtGui.QStandardItem("Проект")
+        rootNode.appendRow(self.project)
+
+        folder1 = QtGui.QStandardItem("Папка 1")
+        self.project.appendRow(folder1)
+
+        self.file1 = QtGui.QStandardItem("Файл 1")
+        folder1.appendRow(self.file1)
+
     def initMenu(self):
         fileMenu = self.menuBar.addMenu('Файл')
+        optionsMenu = self.menuBar.addMenu('Настройки')
         exitAction = QtWidgets.QAction('Выход', self)
+        createFileAction = QtWidgets.QAction('Создать файл', self)
+        openFileAction = QtWidgets.QAction('Открыть файл', self)
         exitAction.triggered.connect(self.close)
+        fileMenu.addAction(createFileAction)
+        fileMenu.addAction(openFileAction)
         fileMenu.addAction(exitAction)
+
+        optionsMenu.addAction(exitAction)
 
     def initGUI(self):
         central_widget = QtWidgets.QWidget()
@@ -38,7 +62,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(central_widget)
 
         # Слева дерево, справа OpenGL и слайдеры
-        gui_layout.addWidget(self.treeWidget, 1)  # занимает 1 часть
+        gui_layout.addWidget(self.treeView, 1)  # занимает 1 часть
 
         right_layout = QtWidgets.QVBoxLayout()
 
