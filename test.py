@@ -1,15 +1,19 @@
-from OpenGL.raw.GL.VERSION.GL_1_0 import GL_MATRIX_MODE
 from PyQt5 import QtCore, QtWidgets  # core Qt functionality
 from PyQt5 import QtGui  # extends QtCore with GUI functionality
 from PyQt5 import QtOpenGL  # provides QGLWidget, a special OpenGL QWidget
 
 import OpenGL.GL as gl  # python wrapping of OpenGL
 from OpenGL import GLU  # OpenGL Utility Library, extends OpenGL functionality
+
+import sys  # we'll need this later to run our Qt application
+
 from OpenGL.arrays import vbo
 
 from pyglm import glm
 
 import numpy as np
+
+from AppWindow import MainWindow
 import math
 import sys  # we'll need this later to run our Qt application
 
@@ -52,9 +56,7 @@ def create_cube():
          2, 1, 5, 6,
          0, 3, 7, 4,
          7, 6, 5, 4])
-    mesh = ObjectMesh(vertVBO, colorVBO, cubeIdxArray)
-    collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
-    obj = SceneObject(mesh, collision, np.array([0.5, 0.5, 0.5]))
+    obj = DrawableObject(vertVBO, colorVBO, cubeIdxArray, np.array([0.5, 0.5, 0.5]))
 
     return obj
 
@@ -223,53 +225,10 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.armLength = 20 + val
 
 
-class MainWindow(QtWidgets.QMainWindow):
-
-    def __init__(self):
-        QtWidgets.QMainWindow.__init__(self)  # call the init for the parent class
-
-        self.resize(800, 600)
-        self.setWindowTitle('OpenGL App')
-
-        self.glWidget = GLWidget(self)
-        self.initGUI()
-
-        timer = QtCore.QTimer(self)
-        timer.setInterval(20)  # period, in milliseconds
-        timer.timeout.connect(self.glWidget.updateGL)
-        timer.start()
-
-    def initGUI(self):
-        central_widget = QtWidgets.QWidget()
-        gui_layout = QtWidgets.QVBoxLayout()
-        central_widget.setLayout(gui_layout)
-
-        self.setCentralWidget(central_widget)
-
-        gui_layout.addWidget(self.glWidget)
-
-        sliderX = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        sliderX.setMinimum(0)
-        sliderX.setMaximum(360)
-        sliderX.valueChanged.connect(lambda val: self.glWidget.setRotX(val))
-
-        sliderY = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        sliderY.setMinimum(1)
-        sliderY.setMaximum(359)
-        sliderY.valueChanged.connect(lambda val: self.glWidget.setRotY(val))
-
-        sliderZ = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        sliderZ.valueChanged.connect(lambda val: self.glWidget.setArm(val))
-
-        gui_layout.addWidget(sliderX)
-        gui_layout.addWidget(sliderY)
-        gui_layout.addWidget(sliderZ)
-
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-
-    win = MainWindow()
+    win = MainWindow(GLWidget())
     win.show()
 
     sys.exit(app.exec_())
