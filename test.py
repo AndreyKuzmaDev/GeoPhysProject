@@ -5,8 +5,6 @@ from PyQt5 import QtOpenGL  # provides QGLWidget, a special OpenGL QWidget
 import OpenGL.GL as gl  # python wrapping of OpenGL
 from OpenGL import GLU  # OpenGL Utility Library, extends OpenGL functionality
 
-import sys  # we'll need this later to run our Qt application
-
 from OpenGL.arrays import vbo
 
 from pyglm import glm
@@ -62,7 +60,7 @@ def create_cube():
 
     return obj
 
-
+# TODO : MAKE THIS SHIT LOOK BETTER
 class GLWidget(QtOpenGL.QGLWidget):
     def __init__(self, parent=None):
         self.parent = parent
@@ -105,18 +103,20 @@ class GLWidget(QtOpenGL.QGLWidget):
     def check_collision(self, direction, obj):
         tMin = 0.0
         tMax = 100.0
-        obj_pos = glm.vec3(obj.matrix[3][:3])
-        delta = obj_pos - glm.vec3([self.camX, self.camY, self.camZ])
-        """print(obj_pos)
-        print(glm.vec3([self.camX, self.camY, self.camZ]))
-        print(obj.location)
+        obj_pos = glm.vec3([obj.matrix[3].x, obj.matrix[3].y, obj.matrix[3].z])
+        loc = glm.mat3(obj.scale[0], 0.0 ,0.0,
+                       0.0, obj.scale[1], 0.0,
+                       0.0, 0.0, obj.scale[2]) * glm.vec3([self.camX, self.camY, self.camZ])
+        delta = obj_pos - loc
+        print(obj_pos)
+        print(loc)
         print(direction)
         print(delta)
-        print()"""
+        print()
         pts_beg = [obj.collision.pointBegin.x, obj.collision.pointBegin.y, obj.collision.pointBegin.z]
         pts_end = [obj.collision.pointEnd.x, obj.collision.pointEnd.y, obj.collision.pointEnd.z]
         for i in range(3):
-            axis = glm.vec3(obj.matrix[i][:3])
+            axis = glm.vec3([obj.matrix[i].x, obj.matrix[i].y, obj.matrix[i].z])
             e = glm.dot(axis, delta)
             f = glm.dot(direction, axis)
 
@@ -148,8 +148,8 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glScale(*obj.scale)
         gl.glTranslate(*(obj.origin * -1))
 
-        if obj.matrix is None:
-            obj.matrix = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
+
+        # print(gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX))
 
         gl.glVertexPointer(3, gl.GL_FLOAT, 0, obj.mesh.verticesVBO)
         gl.glColorPointer(3, gl.GL_FLOAT, 0, obj.mesh.colorsVBO)
@@ -194,6 +194,7 @@ class GLWidget(QtOpenGL.QGLWidget):
             if self.objects[obj].enabled and self.objects[obj].collision.enabled:
                 if self.check_collision(direction, self.objects[obj]) > 0.0:
                     print(obj)
+
         gl.glPopMatrix()
         gl.glPushMatrix()
 
@@ -204,14 +205,16 @@ class GLWidget(QtOpenGL.QGLWidget):
         obj1 = create_cube()
         obj1.scale = np.array([10.0, 10.0, 10.0])
         obj1.location = np.array([-10.0, 0.0, -50.0])
+        obj1.calculate_matrix()
 
         obj2 = create_cube()
         obj2.scale = np.array([1.0, 1.0, 1.0])
         obj2.location = np.array([10.0, 0.0, -50.0])
+        obj2.calculate_matrix()
         self.objects = {obj1.id : obj1,
                         obj2.id : obj2}
 
-        self.target = obj2
+        self.target = obj1
 
 
     def _init_physics(self):
