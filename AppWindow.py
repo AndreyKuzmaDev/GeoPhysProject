@@ -48,6 +48,7 @@ class MainWindow(QtWidgets.QMainWindow):
         exitAction = QtWidgets.QAction('Выход', self)
         createFileAction = QtWidgets.QAction('Создать файл', self)
         openFileAction = QtWidgets.QAction('Открыть файл', self)
+        openFileAction.triggered.connect(self.openFile)
         changeColorAction = QtWidgets.QAction('Цвета', self)
 
         exitAction.triggered.connect(self.close)
@@ -56,6 +57,10 @@ class MainWindow(QtWidgets.QMainWindow):
         fileMenu.addAction(exitAction)
 
         optionsMenu.addAction(changeColorAction)
+    def openFile(self):
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(None, "Выберите файл")
+
+        print("Выбранный файл:", file_path)
 
     def initGUI(self):
         central_widget = QtWidgets.QWidget()
