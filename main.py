@@ -14,6 +14,7 @@ import math
 import sys  # we'll need this later to run our Qt application
 
 from object_constructors import create_cube
+from utilities import screen_pos_to_vector
 
 # functions that create SceneObject should be defined in file object_constructors.py and imported here
 
@@ -22,23 +23,30 @@ from object_constructors import create_cube
 class GLWidget(QtOpenGL.QGLWidget):
     ROT_Y_MIN = math.pi * (0.1 / 360)
     ROT_Y_MAX = math.pi * (359.9 / 360)
+
     ARM_MIN = 20
     ARM_MAX = 100
+
+    SENSITIVITY_X = 360
+    SENSITIVITY_Y = 480
+    SENSITIVITY_ARM = 5
+
+    FIELD_OF_VIEW = 60.0
+    ASPECT_RATIO = 1.0
+    RENDER_DISTANCE_NEAR = 1.0
+    RENDER_DISTANCE_FAR = 10000.0
 
     def __init__(self, parent=None):
         self.parent = parent
 
         self.armLength = 20
 
-        self.rotX = 0.0
-        self.rotY = math.pi * (1 / 360)
+        self.rotX = math.pi * (10 / 360)
+        self.rotY = math.pi * (10 / 360)
 
         self.camX = 0.0
         self.camY = 0.0
         self.camZ = 0.0
-
-        self.sensitivityX = 360
-        self.sensitivityY = 480
 
         self.objects = []
         self.pickedObjects = []
@@ -64,9 +72,9 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glViewport(0, 0, width, height)
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        aspect = width / float(height)
+        self.ASPECT_RATIO = width / float(height)
 
-        GLU.gluPerspective(45.0, aspect, 1.0, 500.0)
+        GLU.gluPerspective(self.FIELD_OF_VIEW, self.ASPECT_RATIO, self.RENDER_DISTANCE_NEAR, self.RENDER_DISTANCE_FAR)
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
 
@@ -91,28 +99,45 @@ class GLWidget(QtOpenGL.QGLWidget):
 
 
     def mouseReleaseEvent(self, a0):
+        clicked = self.mousePrevEvent == self.mouseCapturedEvent
+
         self.mouseCaptured = False
 
         self.mouseCapturedEvent = None
         self.mousePrevEvent = None
+
+        if clicked:
+            self.mouseClickEvent(a0)
         # print("Released", a0.x(), a0.y())
 
 
+    def mouseClickEvent(self, a0):
+        direction = screen_pos_to_vector(a0.x(), a0.y(), self.width(), self.height())
+        dir_t = glm.normalize(glm.vec3(self.viewTarget.location) - glm.vec3([self.camX, self.camY, self.camZ]))
+
+        print(direction, dir_t)
+        for obj in self.objects:
+            if self.objects[obj].enabled and self.objects[obj].collision.enabled:
+                if self.check_collision(direction, self.objects[obj]) > 0.0:
+                    print(obj)
+
+    def wheelEvent(self, a0):
+        if not self.mouseCaptured:
+            return
+
+        da = a0.angleDelta().y() / 15 / 8 * self.SENSITIVITY_ARM
+        self.armLength = max(self.ARM_MIN, min(self.ARM_MAX, self.armLength - da))
+
+
     def check_collision(self, direction, obj):
-        tMin = 0.0
-        tMax = 100.0
+        tMin = self.RENDER_DISTANCE_NEAR
+        tMax = self.RENDER_DISTANCE_FAR
         obj_pos = glm.vec3([obj.matrix[3].x, obj.matrix[3].y, obj.matrix[3].z])
-        loc = glm.mat3(obj.scale[0], 0.0 ,0.0,
-                       0.0, obj.scale[1], 0.0,
-                       0.0, 0.0, obj.scale[2]) * glm.vec3([self.camX, self.camY, self.camZ])
+        loc = glm.vec3([self.camX, self.camY, self.camZ])
         delta = obj_pos - loc
-        """print(obj_pos)
-        print(loc)
-        print(direction)
-        print(delta)
-        print()"""
-        pts_beg = [obj.collision.pointBegin.x, obj.collision.pointBegin.y, obj.collision.pointBegin.z]
-        pts_end = [obj.collision.pointEnd.x, obj.collision.pointEnd.y, obj.collision.pointEnd.z]
+
+        pts_beg = obj.collision.pointBegin
+        pts_end = obj.collision.pointEnd
         for i in range(3):
             axis = glm.vec3([obj.matrix[i].x, obj.matrix[i].y, obj.matrix[i].z])
             e = glm.dot(axis, delta)
@@ -120,7 +145,8 @@ class GLWidget(QtOpenGL.QGLWidget):
 
             if math.fabs(f) > 0:
                 t1 = (e + pts_beg[i]) / f
-                t2 = (e + pts_end[i]) / f
+                t2 = (e + pts_end[i] * obj.scale[i]) / f
+
                 if t1 > t2:
                     t1, t2 = t2, t1
                 if t2 < tMax:
@@ -151,7 +177,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glVertexPointer(3, gl.GL_FLOAT, 0, obj.mesh.verticesVBO)
         gl.glColorPointer(3, gl.GL_FLOAT, 0, obj.mesh.colorsVBO)
 
-        gl.glDrawElements(gl.GL_QUADS, len(obj.mesh.surfaces), gl.GL_UNSIGNED_INT, obj.mesh.surfaces)
+        gl.glDrawElements(obj.mesh.surface_mode, len(obj.mesh.surfaces), gl.GL_UNSIGNED_INT, obj.mesh.surfaces)
         gl.glPopMatrix()
 
 
@@ -186,11 +212,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
         gl.glDisableClientState(gl.GL_COLOR_ARRAY)
 
-        direction = glm.normalize(glm.vec3(self.viewTarget.location) - glm.vec3([self.camX, self.camY, self.camZ]))
-        for obj in self.objects:
-            if self.objects[obj].enabled and self.objects[obj].collision.enabled:
-                if self.check_collision(direction, self.objects[obj]) > 0.0:
-                    pass
+
 
         gl.glPopMatrix()
         gl.glPushMatrix()
@@ -236,10 +258,10 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.rotY = math.pi * (val / 360)
 
     def addRotX(self, val):
-        self.rotX += math.pi * (val / self.sensitivityX)
+        self.rotX += math.pi * (val / self.SENSITIVITY_X)
 
     def addRotY(self, val):
-        self.rotY = max(self.ROT_Y_MIN, min(self.ROT_Y_MAX, self.rotY - math.pi * (val / self.sensitivityY)))
+        self.rotY = max(self.ROT_Y_MIN, min(self.ROT_Y_MAX, self.rotY - math.pi * (val / self.SENSITIVITY_Y)))
 
     def setArm(self, val):
         self.armLength = 20 + val

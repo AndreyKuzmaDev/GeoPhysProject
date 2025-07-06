@@ -1,6 +1,7 @@
 import numpy as np
 from OpenGL.arrays import vbo
 from pyglm import glm
+import OpenGL.GL as gl
 
 from collisions import CollisionBox
 from object_meshes import ObjectMesh
@@ -41,7 +42,7 @@ def create_cube():
          2, 1, 5, 6,
          0, 3, 7, 4,
          7, 6, 5, 4])
-    mesh = ObjectMesh(vertVBO, colorVBO, cubeIdxArray)
+    mesh = ObjectMesh(vertVBO, colorVBO, cubeIdxArray, gl.GL_QUADS)
     collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
     obj = SceneObject(mesh, collision, np.array([0.5, 0.5, 0.5]))
 
