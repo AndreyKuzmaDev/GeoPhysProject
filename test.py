@@ -6,6 +6,7 @@ import OpenGL.GL as gl  # python wrapping of OpenGL
 from OpenGL import GLU  # OpenGL Utility Library, extends OpenGL functionality
 
 from OpenGL.arrays import vbo
+from ezdxf.entities import Face3d
 
 from pyglm import glm
 
@@ -29,32 +30,25 @@ def load_dxf_vertices(file_path, scale=1.0, normalize=False):
     index_offset = 0
 
     for e in msp.query('3DFACE'):
-        if e.dxftype() == '3DFACE':
-            pts = [(point[0]%10, point[1]%10, point[2]%10 if len(point) > 2 else 0) for point in e.get_points('xyz')]
-        else:
-            pts = [(vertex.dxf.location.x%10, vertex.dxf.location.y%10, vertex.dxf.location.z%10) for vertex in e.vertices()]
+        pts = [(vertex.x, vertex.y, vertex.z) for vertex in e.wcs_vertices(False)]
 
         pts = np.array(pts, dtype=np.float64) * scale
-        print(pts)
+        #print(pts)
         vertices.extend(pts)
 
         n = len(pts)
         for i in range(n):
             indices.extend([index_offset + i,])
-
-        if e.closed:
-            indices.extend([index_offset + n - 1, index_offset])
-
         index_offset += n
 
     vertices = np.array(vertices, dtype=np.float64)
-    print(vertices)
-    print(len(vertices))
+
     if normalize:
         min_coords = vertices.min(axis=0)
         max_coords = vertices.max(axis=0)
         vertices = (vertices - min_coords) / (max_coords - min_coords)
-
+    print(vertices[:10])
+    print(len(vertices))
     indices = np.array(indices, dtype=np.uint32)
     print(indices)
     print(len(indices))
@@ -62,14 +56,14 @@ def load_dxf_vertices(file_path, scale=1.0, normalize=False):
 
 
 def create_dxf_object(file_path):
-    vertices, indices = load_dxf_vertices(file_path, True)
+    vertices, indices = load_dxf_vertices(file_path, 1.0,True)
 
     print(vertices.shape, indices.shape)
 
-    vertVBO = vbo.VBO(vertices.astype(np.float32))
+    vertVBO = vbo.VBO(vertices.astype(np.float64))
     vertVBO.bind()
 
-    colors = np.tile(np.array([0.5, 0.5, 0.5], dtype=np.float32), (len(vertices), 1))
+    colors = np.tile(np.array([0.0, 0.0, 0.0], dtype=np.float32), (len(vertices), 1))
     colorVBO = vbo.VBO(colors.astype(np.float32))
     colorVBO.bind()
 
@@ -210,8 +204,6 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glRotatef(obj.rotation[2], 0.0, 0.0, 1.0)
         gl.glScale(*obj.scale)
         gl.glTranslate(*(obj.origin * -1))
-
-
         # print(gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX))
 
         gl.glVertexPointer(3, gl.GL_FLOAT, 0, obj.mesh.verticesVBO)
