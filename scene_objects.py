@@ -45,8 +45,3 @@ class SceneObject:
                       0.0, 0.0, 0.0, 1.0)
         self.matrix = glm.transpose(R * O * S)
 
-
-
-
-if __name__ == '__main__':
-    a = SceneObject(None, None)

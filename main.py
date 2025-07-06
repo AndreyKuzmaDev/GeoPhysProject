@@ -5,8 +5,6 @@ from PyQt5 import QtOpenGL  # provides QGLWidget, a special OpenGL QWidget
 import OpenGL.GL as gl  # python wrapping of OpenGL
 from OpenGL import GLU  # OpenGL Utility Library, extends OpenGL functionality
 
-from OpenGL.arrays import vbo
-
 from pyglm import glm
 
 import numpy as np
@@ -15,53 +13,18 @@ from AppWindow import MainWindow
 import math
 import sys  # we'll need this later to run our Qt application
 
-from object_meshes import ObjectMesh
-from scene_objects import SceneObject
-from collisions import CollisionBox
+from object_constructors import create_cube
 
+# functions that create SceneObject should be defined in file object_constructors.py and imported here
 
-def create_cube():
-    cubeVtxArray = np.array(
-        [[0.0, 0.0, 0.0],
-         [1.0, 0.0, 0.0],
-         [1.0, 1.0, 0.0],
-         [0.0, 1.0, 0.0],
-         [0.0, 0.0, 1.0],
-         [1.0, 0.0, 1.0],
-         [1.0, 1.0, 1.0],
-         [0.0, 1.0, 1.0]])
-    vertVBO = vbo.VBO(np.reshape(cubeVtxArray,
-                                 (1, -1)).astype(np.float32))
-    vertVBO.bind()
-
-    cubeClrArray = np.array(
-        [[0.0, 0.0, 0.0],
-         [1.0, 0.0, 0.0],
-         [1.0, 1.0, 0.0],
-         [0.0, 1.0, 0.0],
-         [0.0, 0.0, 1.0],
-         [1.0, 0.0, 1.0],
-         [1.0, 1.0, 1.0],
-         [0.0, 1.0, 1.0]])
-    colorVBO = vbo.VBO(np.reshape(cubeClrArray,
-                                  (1, -1)).astype(np.float32))
-    colorVBO.bind()
-
-    cubeIdxArray = np.array(
-        [0, 1, 2, 3,
-         3, 2, 6, 7,
-         1, 0, 4, 5,
-         2, 1, 5, 6,
-         0, 3, 7, 4,
-         7, 6, 5, 4])
-    mesh = ObjectMesh(vertVBO, colorVBO, cubeIdxArray)
-    collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
-    obj = SceneObject(mesh, collision, np.array([0.5, 0.5, 0.5]))
-
-    return obj
 
 # TODO : MAKE THIS SHIT LOOK BETTER
 class GLWidget(QtOpenGL.QGLWidget):
+    ROT_Y_MIN = math.pi * (0.1 / 360)
+    ROT_Y_MAX = math.pi * (359.9 / 360)
+    ARM_MIN = 20
+    ARM_MAX = 100
+
     def __init__(self, parent=None):
         self.parent = parent
 
@@ -74,11 +37,17 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.camY = 0.0
         self.camZ = 0.0
 
-        self.objects = []
-        self.picked = None
-        self.target = None
+        self.sensitivityX = 360
+        self.sensitivityY = 480
 
-        self.lockPicked = False
+        self.objects = []
+        self.pickedObjects = []
+        self.hoveredObject = None
+        self.viewTarget = None
+
+        self.mouseCaptured = False
+        self.mouseCapturedEvent = None
+        self.mousePrevEvent = None
 
         QtOpenGL.QGLWidget.__init__(self, parent)
 
@@ -100,6 +69,34 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
 
+    def mousePressEvent(self, a0):
+        self.mouseCaptured = True
+
+        self.mouseCapturedEvent = (a0.x(), a0.y())
+        self.mousePrevEvent = (a0.x(), a0.y())
+        print("Pressed", a0.x(), a0.y())
+
+
+    def mouseMoveEvent(self, a0):
+        if not self.mouseCaptured:
+            return
+        dx, dy = a0.x() - self.mousePrevEvent[0], a0.y() - self.mousePrevEvent[1]
+
+        if max(abs(dx), abs(dy)) > 0:
+            print("Moved", dx, dy)
+            self.addRotX(dx)
+            self.addRotY(dy)
+            self.mousePrevEvent = (a0.x(), a0.y())
+
+
+    def mouseReleaseEvent(self, a0):
+        self.mouseCaptured = False
+
+        self.mouseCapturedEvent = None
+        self.mousePrevEvent = None
+        print("Released", a0.x(), a0.y())
+
+
     def check_collision(self, direction, obj):
         tMin = 0.0
         tMax = 100.0
@@ -108,11 +105,11 @@ class GLWidget(QtOpenGL.QGLWidget):
                        0.0, obj.scale[1], 0.0,
                        0.0, 0.0, obj.scale[2]) * glm.vec3([self.camX, self.camY, self.camZ])
         delta = obj_pos - loc
-        print(obj_pos)
+        """print(obj_pos)
         print(loc)
         print(direction)
         print(delta)
-        print()
+        print()"""
         pts_beg = [obj.collision.pointBegin.x, obj.collision.pointBegin.y, obj.collision.pointBegin.z]
         pts_end = [obj.collision.pointEnd.x, obj.collision.pointEnd.y, obj.collision.pointEnd.z]
         for i in range(3):
@@ -159,8 +156,8 @@ class GLWidget(QtOpenGL.QGLWidget):
 
 
     def _compute_camera(self):
-        if self.target is not None:
-            x, y, z = self.target.location
+        if self.viewTarget is not None:
+            x, y, z = self.viewTarget.location
             self.camX = x + self.armLength * math.sin(self.rotY) * math.cos(self.rotX)
             self.camY = y + self.armLength * math.cos(self.rotY)
             self.camZ = z + self.armLength * math.sin(self.rotY) * math.sin(self.rotX)
@@ -168,8 +165,8 @@ class GLWidget(QtOpenGL.QGLWidget):
 
 
     def _position_camera(self):
-        if self.target is not None:
-            x, y, z = self.target.location
+        if self.viewTarget is not None:
+            x, y, z = self.viewTarget.location
             GLU.gluLookAt(self.camX, self.camY, self.camZ, x, y, z, 0.0, 1.0, 0.0)
 
 
@@ -189,11 +186,11 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
         gl.glDisableClientState(gl.GL_COLOR_ARRAY)
 
-        direction = glm.normalize(glm.vec3(self.target.location) - glm.vec3([self.camX, self.camY, self.camZ]))
+        direction = glm.normalize(glm.vec3(self.viewTarget.location) - glm.vec3([self.camX, self.camY, self.camZ]))
         for obj in self.objects:
             if self.objects[obj].enabled and self.objects[obj].collision.enabled:
                 if self.check_collision(direction, self.objects[obj]) > 0.0:
-                    print(obj)
+                    pass
 
         gl.glPopMatrix()
         gl.glPushMatrix()
@@ -214,7 +211,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.objects = {obj1.id : obj1,
                         obj2.id : obj2}
 
-        self.target = obj1
+        self.viewTarget = obj1
 
 
     def _init_physics(self):
@@ -225,6 +222,12 @@ class GLWidget(QtOpenGL.QGLWidget):
 
     def setRotY(self, val):
         self.rotY = math.pi * (val / 360)
+
+    def addRotX(self, val):
+        self.rotX += math.pi * (val / self.sensitivityX)
+
+    def addRotY(self, val):
+        self.rotY = max(self.ROT_Y_MIN, min(self.ROT_Y_MAX, self.rotY - math.pi * (val / self.sensitivityY)))
 
     def setArm(self, val):
         self.armLength = 20 + val
