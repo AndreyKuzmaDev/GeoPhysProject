@@ -59,6 +59,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glPushMatrix()
 
 
+
     def resizeGL(self, width, height):
         gl.glViewport(0, 0, width, height)
         gl.glMatrixMode(gl.GL_PROJECTION)
@@ -74,7 +75,7 @@ class GLWidget(QtOpenGL.QGLWidget):
 
         self.mouseCapturedEvent = (a0.x(), a0.y())
         self.mousePrevEvent = (a0.x(), a0.y())
-        print("Pressed", a0.x(), a0.y())
+        # print("Pressed", a0.x(), a0.y())
 
 
     def mouseMoveEvent(self, a0):
@@ -83,7 +84,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         dx, dy = a0.x() - self.mousePrevEvent[0], a0.y() - self.mousePrevEvent[1]
 
         if max(abs(dx), abs(dy)) > 0:
-            print("Moved", dx, dy)
+            # print("Moved", dx, dy)
             self.addRotX(dx)
             self.addRotY(dy)
             self.mousePrevEvent = (a0.x(), a0.y())
@@ -94,7 +95,7 @@ class GLWidget(QtOpenGL.QGLWidget):
 
         self.mouseCapturedEvent = None
         self.mousePrevEvent = None
-        print("Released", a0.x(), a0.y())
+        # print("Released", a0.x(), a0.y())
 
 
     def check_collision(self, direction, obj):
@@ -144,7 +145,6 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glRotatef(obj.rotation[2], 0.0, 0.0, 1.0)
         gl.glScale(*obj.scale)
         gl.glTranslate(*(obj.origin * -1))
-
 
         # print(gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX))
 
@@ -214,8 +214,20 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.viewTarget = obj1
 
 
-    def _init_physics(self):
-        pass
+    def set_perspective_top(self):
+        self.rotX = 0.0
+        self.rotY = self.ROT_Y_MIN
+
+
+    def set_perspective_side(self, side=0):
+        self.rotX = math.pi * side / 2
+        self.rotY = math.pi / 2
+
+
+    def set_perspective_bottom(self):
+        self.rotX = 0.0
+        self.rotY = self.ROT_Y_MAX
+
 
     def setRotX(self, val):
         self.rotX = math.pi * (val / 180)
