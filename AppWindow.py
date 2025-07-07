@@ -2,6 +2,7 @@ import sys
 
 from PyQt5 import QtCore, QtWidgets  # core Qt functionality
 from PyQt5 import QtGui  # extends QtCore with GUI functionality
+import os
 from PyQt5 import QtOpenGL
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
 
@@ -16,42 +17,64 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.glWidget = glWidget
 
-        # Создаём меню-бар как поле класса
         self.menuBar = self.menuBar()
         self.initMenu()
 
-        self.openProject()
 
         self.treeView = QtWidgets.QTreeView()
+        self.model = QtGui.QStandardItemModel()
+        self.model.setHorizontalHeaderLabels(["Открытые проекты"])
         self.treeView.setModel(self.model)
 
         self.initGUI()
         self.initTimer()
 
     def openProject(self):
-        self.model = QtGui.QStandardItemModel()
+        folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Выберите папку")
+        if not folder_path:
+            return
+
         rootNode = self.model.invisibleRootItem()
+        project_item = QtGui.QStandardItem(os.path.basename(folder_path))
+        rootNode.appendRow(project_item)
 
-        self.project = QtGui.QStandardItem("Проект")
-        rootNode.appendRow(self.project)
+        def addItems(parent_item, path):
+            for entry in os.listdir(path):
+                entry_path = os.path.join(path, entry)
+                item = QtGui.QStandardItem(entry)
+                parent_item.appendRow(item)
+                if os.path.isdir(entry_path):
+                    addItems(item, entry_path)
 
-        folder1 = QtGui.QStandardItem("Папка 1")
-        self.project.appendRow(folder1)
+        addItems(project_item, folder_path)
 
-        self.file1 = QtGui.QStandardItem("Файл 1")
-        folder1.appendRow(self.file1)
+    def closeSelectedProject(self):
+        index = self.treeView.currentIndex()
+        if not index.isValid():
+            QtWidgets.QMessageBox.warning(self, "Ошибка", "Проект не выбран")
+            return
 
+        item = self.model.itemFromIndex(index)
+
+        # Если проект — корневой элемент (проверка по необходимости)
+        parent = item.parent()
+        if parent is None:
+            # Удаляем корневую папку из модели
+            self.model.removeRow(item.row())
+        else:
+            # Тут можно добавить логику, если хотите закрывать не только корень
+            QtWidgets.QMessageBox.warning(self, "Ошибка", "Выделена не корневая папка")
     def initMenu(self):
         fileMenu = self.menuBar.addMenu('Файл')
         optionsMenu = self.menuBar.addMenu('Настройки')
 
-        exitAction = QtWidgets.QAction('Выход', self)
-        createFileAction = QtWidgets.QAction('Создать файл', self)
-        openFileAction = QtWidgets.QAction('Открыть файл', self)
-        openFileAction.triggered.connect(self.openFile)
+        exitAction = QtWidgets.QAction('Закрыть проект', self)
+        createFileAction = QtWidgets.QAction('Создать проект', self)
+        openFileAction = QtWidgets.QAction('Открыть проект', self)
+        openFileAction.triggered.connect(self.openProject)
         changeColorAction = QtWidgets.QAction('Цвета', self)
 
-        exitAction.triggered.connect(self.close)
+        exitAction.triggered.connect(self.closeSelectedProject)
         fileMenu.addAction(createFileAction)
         fileMenu.addAction(openFileAction)
         fileMenu.addAction(exitAction)
@@ -68,8 +91,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         central_widget.setLayout(gui_layout)
         self.setCentralWidget(central_widget)
-
-        # Слева дерево, справа OpenGL и слайдеры
         gui_layout.addWidget(self.treeView, 1)  # занимает 1 часть
 
         right_layout = QtWidgets.QVBoxLayout()
