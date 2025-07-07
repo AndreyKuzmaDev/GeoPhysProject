@@ -13,16 +13,17 @@ def mul_mat4_vec4(a, b):
     return glm.vec4(*[sum(a[i][j] * b[j] for j in range(4)) for i in range(4)])
 
 
-def screen_pos_to_vector(x, y, width, height):
-    view = gl.glGetDouble(gl.GL_MODELVIEW_MATRIX)
+def screen_pos_to_vector(x, y, width, height, camera, target):
+    view = glm.transpose(glm.lookAt(camera, target, glm.vec3([0.0, 1.0, 0.0])))
     projection = gl.glGetDouble(gl.GL_PROJECTION_MATRIX)
-
+    # print(view)
+    # print(projection)
     ray_start = glm.vec4((x / width - 0.5) * 2.0,
-                         (y - height - 0.5) * 2.0,
+                         (y / height - 0.5) * 2.0,
                          -1.0,
                          1.0)
     ray_end = glm.vec4((x / width - 0.5) * 2.0,
-                         (y - height - 0.5) * 2.0,
+                         (y / height - 0.5) * 2.0,
                          0.0,
                          1.0)
     inverse_projection = glm.inverse(projection)

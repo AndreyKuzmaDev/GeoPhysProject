@@ -112,7 +112,8 @@ class GLWidget(QtOpenGL.QGLWidget):
 
 
     def mouseClickEvent(self, a0):
-        direction = screen_pos_to_vector(a0.x(), a0.y(), self.width(), self.height())
+        cam = glm.vec3([self.camX, self.camY, self.camZ])
+        direction = screen_pos_to_vector(a0.x(), a0.y(), self.width(), self.height(), cam, glm.vec3(self.viewTarget.location))
         dir_t = glm.normalize(glm.vec3(self.viewTarget.location) - glm.vec3([self.camX, self.camY, self.camZ]))
 
         print(direction, dir_t)
