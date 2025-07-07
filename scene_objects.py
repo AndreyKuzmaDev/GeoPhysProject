@@ -31,22 +31,13 @@ class SceneObject:
         x, y, z = self.location
         sx, sy, sz = self.scale
         ox, oy, oz = self.origin
-        R = glm.mat4(cos(b) * cos(c), sin(a) * sin(b) * cos(c) - cos(a) * sin(c), cos(a) * sin(b) * cos(c) + sin(a) * sin(c), x,
-                      cos(b) * sin(c), sin(a) * sin(b) * sin(c) + cos(a) * cos(c), cos(a) * sin(b) * sin(c) - sin(a) * cos(c), y,
-                      -sin(b),         sin(a) * cos(b),                            cos(a) * cos(b),                            z,
+        R = glm.mat4(cos(b) * cos(c), sin(a) * sin(b) * cos(c) - cos(a) * sin(c), cos(a) * sin(b) * cos(c) + sin(a) * sin(c), x - ox * sx,
+                      cos(b) * sin(c), sin(a) * sin(b) * sin(c) + cos(a) * cos(c), cos(a) * sin(b) * sin(c) - sin(a) * cos(c), y - oy * sy,
+                      -sin(b),         sin(a) * cos(b),                            cos(a) * cos(b),                            z - oz * sz,
                       0.0,             0.0,                                        0.0,                                        1.0)
         S = glm.mat4(sx, 0.0, 0.0, 0.0,
                       0.0, sy, 0.0, 0.0,
                       0.0, 0.0, sz, 0.0,
                       0.0, 0.0, 0.0, 1.0)
-        O = glm.mat4(1.0, 0.0, 0.0, -ox,
-                      0.0, 1.0, 0.0, -oy,
-                      0.0, 0.0, 1.0, -oz,
-                      0.0, 0.0, 0.0, 1.0)
-        self.matrix = glm.transpose(R * O * S)
+        self.matrix = glm.transpose(R)
 
-
-
-
-if __name__ == '__main__':
-    a = SceneObject(None, None)
