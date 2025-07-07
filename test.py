@@ -28,44 +28,51 @@ def load_dxf_vertices(file_path, scale=1.0, normalize=False):
     vertices = []
     indices = []
     index_offset = 0
-
+    face_limit = 100
     for e in msp.query('3DFACE'):
+        if len(e.wcs_vertices(False)) != 3:
+            continue
         pts = [(vertex.x, vertex.y, vertex.z) for vertex in e.wcs_vertices(False)]
 
-        pts = np.array(pts, dtype=np.float64) * scale
+        pts = np.array(pts, dtype=np.float32) * scale
         #print(pts)
         vertices.extend(pts)
 
         n = len(pts)
         for i in range(n):
-            indices.extend([index_offset + i,])
+            indices.extend([(index_offset + n - i - 1) % 8 ,])
         index_offset += n
+        face_limit -= 1
+        if face_limit == 0:
+            break
 
-    vertices = np.array(vertices, dtype=np.float64)
+    vertices = np.array(vertices, dtype=np.float32)
 
     if normalize:
         min_coords = vertices.min(axis=0)
         max_coords = vertices.max(axis=0)
         vertices = (vertices - min_coords) / (max_coords - min_coords)
-    print(vertices[:10])
-    print(len(vertices))
+
     indices = np.array(indices, dtype=np.uint32)
-    print(indices)
-    print(len(indices))
+
     return vertices, indices
 
 
 def create_dxf_object(file_path):
     vertices, indices = load_dxf_vertices(file_path, 1.0,True)
-
-    print(vertices.shape, indices.shape)
-
-    vertVBO = vbo.VBO(vertices.astype(np.float64))
+    print(vertices)
+    print(indices)
+    vertVBO = vbo.VBO(np.reshape(vertices,
+                                  (1, -1)).astype(np.float32))
     vertVBO.bind()
 
     colors = np.tile(np.array([0.0, 0.0, 0.0], dtype=np.float32), (len(vertices), 1))
-    colorVBO = vbo.VBO(colors.astype(np.float32))
+    colorVBO = vbo.VBO(np.reshape(colors,
+                                  (1, -1)).astype(np.float32))
     colorVBO.bind()
+
+    print(vertVBO)
+    print(colorVBO)
 
     mesh = ObjectMesh(vertVBO, colorVBO, indices)
 
@@ -74,22 +81,12 @@ def create_dxf_object(file_path):
     collision = CollisionBox(glm.vec3(min_v), glm.vec3(max_v))
 
     center = (min_v + max_v) / 2.0
+
     obj = SceneObject(mesh, collision, center)
 
     return obj
 def create_cube():
-    cubeVtxArray = np.array(
-        [[0.0, 0.0, 0.0],
-         [1.0, 0.0, 0.0],
-         [1.0, 1.0, 0.0],
-         [0.0, 1.0, 0.0],
-         [0.0, 0.0, 1.0],
-         [1.0, 0.0, 1.0],
-         [1.0, 1.0, 1.0],
-         [0.0, 1.0, 1.0]])
-    vertVBO = vbo.VBO(np.reshape(cubeVtxArray,
-                                 (1, -1)).astype(np.float32))
-    vertVBO.bind()
+
 
     cubeClrArray = np.array(
         [[0.0, 0.0, 0.0],
@@ -111,7 +108,34 @@ def create_cube():
          2, 1, 5, 6,
          0, 3, 7, 4,
          7, 6, 5, 4])
-    mesh = ObjectMesh(vertVBO, colorVBO, cubeIdxArray)
+    cubeVtxArray = np.array(
+        [[0.0, 0.0, 0.0],
+         [1.0, 0.0, 0.0],
+         [1.0, 1.0, 0.0],
+         [0.0, 1.0, 0.0],
+         [0.0, 0.0, 1.0],
+         [1.0, 0.0, 1.0],
+         [1.0, 1.0, 1.0],
+         [0.0, 1.0, 1.0]])
+    vertVBO = vbo.VBO(np.reshape(cubeVtxArray,
+                                 (1, -1)).astype(np.float32))
+    vertVBO.bind()
+    cubeEdgesIdxArray = np.array(
+        [0, 1,
+         1, 2,
+         2, 3,
+         3, 0,
+         0, 4,
+         1, 5,
+         2, 6,
+         3, 7,
+         4, 5,
+         5, 6,
+         6, 7,
+         7, 4]
+    )
+
+    mesh = ObjectMesh(vertVBO, colorVBO, cubeIdxArray, cubeEdgesIdxArray)
     collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
     obj = SceneObject(mesh, collision, np.array([0.5, 0.5, 0.5]))
 
@@ -153,7 +177,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glLoadIdentity()
         aspect = width / float(height)
 
-        GLU.gluPerspective(45.0, aspect, 1.0, 500.0)
+        GLU.gluPerspective(45.0, aspect, 1.0, 50000.0)
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
 
@@ -209,7 +233,10 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glVertexPointer(3, gl.GL_FLOAT, 0, obj.mesh.verticesVBO)
         gl.glColorPointer(3, gl.GL_FLOAT, 0, obj.mesh.colorsVBO)
 
-        gl.glDrawElements(gl.GL_TRIANGLES, len(obj.mesh.surfaces), gl.GL_UNSIGNED_INT, obj.mesh.surfaces)
+        """if obj.mesh.faces is not None:
+            gl.glDrawElements(gl.GL_QUADS, len(obj.mesh.faces), gl.GL_UNSIGNED_INT, obj.mesh.faces)"""
+        # if obj.mesh.edges is not None:
+        gl.glDrawElements(gl.GL_LINES, len(obj.mesh.faces), gl.GL_UNSIGNED_INT, obj.mesh.faces)
         gl.glPopMatrix()
 
 
@@ -257,18 +284,20 @@ class GLWidget(QtOpenGL.QGLWidget):
 
 
     def _init_geometry(self):
-        obj1 = create_dxf_object("korkino_model.dxf")
-        obj1.scale = np.array([1.0, 1.0, 1.0])
-        obj1.location = np.array([0.0, 0.0, -50.00])
-        obj1.calculate_matrix()
-
-        '''obj2 = create_cube()
-        obj2.scale = np.array([1.0, 1.0, 1.0])
+        obj2 = create_cube()
+        obj2.scale = np.array([5.0, 5.0, 5.0])
         obj2.location = np.array([10.0, 0.0, -50.0])
-        obj2.calculate_matrix()'''
-        self.objects = {obj1.id : obj1}
+        obj2.calculate_matrix()
 
-        self.target = obj1
+        """obj1 = create_dxf_object("../korkino_model.dxf")
+        obj1.scale = np.array([5.0, 5.0, 5.0])
+        obj1.location = np.array([0.0, 0.0, -50.00])
+        obj1.calculate_matrix()"""
+
+
+        self.objects = {obj2.id : obj2}
+
+        self.target = obj2
 
 
     def _init_physics(self):
