@@ -16,7 +16,7 @@ from AppWindow import MainWindow
 import math
 import sys  # we'll need this later to run our Qt application
 
-from object_constructors import create_cube
+from object_constructors import create_cube, create_dxf_object, create_test
 from utilities import screen_pos_to_vector
 
 
@@ -25,7 +25,7 @@ class GLWidget(QtOpenGL.QGLWidget):
     ROT_Y_MIN = math.pi * (0.1 / 360)
     ROT_Y_MAX = math.pi * (359.9 / 360)
 
-    ARM_MIN = 20
+    ARM_MIN = 5
     ARM_MAX = 100
 
     SENSITIVITY_X = 360
@@ -36,6 +36,9 @@ class GLWidget(QtOpenGL.QGLWidget):
     ASPECT_RATIO = 1.0
     RENDER_DISTANCE_NEAR = 1.0
     RENDER_DISTANCE_FAR = 10000.0
+
+    ENABLE_EDGES = True
+    ENABLE_FACES = False
 
     def __init__(self, parent=None):
         self.parent = parent
@@ -173,16 +176,19 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glScale(*obj.scale)
         gl.glTranslate(*(obj.origin * -1))
 
-        # print(gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX))
-
+        obj.mesh.verticesVBO.bind()
+        obj.mesh.colorsVBO.bind()
         gl.glVertexPointer(3, gl.GL_FLOAT, 0, obj.mesh.verticesVBO)
         gl.glColorPointer(3, gl.GL_FLOAT, 0, obj.mesh.colorsVBO)
 
-        """if obj.mesh.faces is not None:
-            gl.glDrawElements(gl.GL_QUADS, len(obj.mesh.faces), gl.GL_UNSIGNED_INT, obj.mesh.faces)"""
-        # if obj.mesh.edges is not None:
-        gl.glDrawElements(gl.GL_LINES, len(obj.mesh.faces), gl.GL_UNSIGNED_INT, obj.mesh.faces)
-        gl.glDrawElements(obj.mesh.surface_mode, len(obj.mesh.faces), gl.GL_UNSIGNED_INT, obj.mesh.faces)
+        if self.ENABLE_EDGES and obj.mesh.edges is not None:
+            gl.glDrawElements(gl.GL_LINES, len(obj.mesh.edges), gl.GL_UNSIGNED_INT, obj.mesh.edges)
+        if self.ENABLE_FACES and obj.mesh.faces is not None:
+            gl.glDrawElements(obj.mesh.surface_mode, len(obj.mesh.faces), gl.GL_UNSIGNED_INT, obj.mesh.faces)
+
+        obj.mesh.verticesVBO.unbind()
+        obj.mesh.colorsVBO.unbind()
+
         gl.glPopMatrix()
 
 
@@ -226,25 +232,24 @@ class GLWidget(QtOpenGL.QGLWidget):
 
 
     def _init_geometry(self):
-        obj1 = create_cube()
-        obj1.scale = np.array([10.0, 10.0, 10.0])
-        obj1.location = np.array([-10.0, 0.0, -50.0])
+        obj1 = create_test()
+        obj1.scale = np.array([1.0, 1.0, 1.0])
+        obj1.location = np.array([0.0, 0.0, -50.00])
         obj1.calculate_matrix()
 
-        obj2 = create_cube()
+        """obj2 = create_cube()
         obj2.scale = np.array([1.0, 1.0, 1.0])
-        obj2.location = np.array([10.0, 0.0, -50.0])
+        obj2.location = np.array([2.0, 0.0, -50.0])
         obj2.calculate_matrix()
 
-        """obj1 = create_dxf_object("../korkino_model.dxf")
-        obj1.scale = np.array([5.0, 5.0, 5.0])
-        obj1.location = np.array([0.0, 0.0, -50.00])
-        obj1.calculate_matrix()"""
+        obj3 = create_dxf_object("../korkino_model.dxf")
+        obj3.scale = np.array([1.0, 1.0, 1.0])
+        obj3.location = np.array([4.0, 0.0, -50.0])
+        obj3.calculate_matrix()"""
 
+        self.objects = {obj1.id : obj1}
 
-        self.objects = {obj2.id : obj2}
-
-        self.viewTarget = obj2
+        self.viewTarget = obj1
 
     def set_perspective_top(self):
         self.rotX = 0.0
