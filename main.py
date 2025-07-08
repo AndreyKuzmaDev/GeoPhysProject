@@ -66,7 +66,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         QtOpenGL.QGLWidget.__init__(self, parent)
 
     def initializeGL(self):
-        self.qglClearColor(QtGui.QColor(10, 10, 30))
+        self.qglClearColor(QtGui.QColor(152, 221, 250))
         gl.glEnable(gl.GL_DEPTH_TEST)
 
         self._init_geometry()

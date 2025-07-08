@@ -2,7 +2,6 @@ import numpy as np
 from pyglm import glm
 from pyglm.glm import sin, cos
 
-from object_constructors import create_sphere
 
 # NEVER EVER interact with this var outside SceneObject class
 OBJECT_COUNT = 0

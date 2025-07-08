@@ -51,9 +51,9 @@ def load_dxf_vertices(file_path, scale=1.0, normalize=False):
 def create_dxf_object(file_path, normalize=False):
     vertices, indices_faces_t, indices_faces_q, indices_edges = load_dxf_vertices(file_path, 1.0, normalize)
 
-    colors = np.tile(np.array([0.6, 0.6, 0.6], dtype=np.float32), (len(vertices), 1))
-    colors_edges = np.tile(np.array([0.6, 1.0, 0.0], dtype=np.float32), (len(vertices), 1))
-    colors_hovered = np.tile(np.array([1.0, 0.5, 0.0], dtype=np.float32), (len(vertices), 1))
+    colors = np.tile(np.array([0.3, 0.3, 0.3], dtype=np.float32), (len(vertices), 1))
+    colors_edges = np.tile(np.array([0.3, 0.3, 0.3], dtype=np.float32), (len(vertices), 1))
+    colors_hovered = np.tile(np.array([0.3, 0.3, 0.3], dtype=np.float32), (len(vertices), 1))
 
     vertVBO = vbo.VBO(vertices.flatten().astype(np.float32))
     colorVBO = vbo.VBO(colors.flatten().astype(np.float32))
@@ -90,7 +90,7 @@ def create_cube():
     colorVBO = vbo.VBO(np.reshape(colors,
                                   (1, -1)).astype(np.float32))
 
-    colors_edges = np.tile(np.array([1.0, 1.0, 1.0], dtype=np.float32), (8, 1))
+    colors_edges = np.tile(np.array([0.5, 0.13, 0.13], dtype=np.float32), (8, 1))
     colors_hovered = np.tile(np.array([1.0, 0.5, 0.0], dtype=np.float32), (8, 1))
 
     vertices = np.array(

@@ -4,10 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c739edcd-44b1-4ac4-b07c-9abfb72d4a03" name="Changes" comment="Added methods to set perspective from top, bottom and sides">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="c739edcd-44b1-4ac4-b07c-9abfb72d4a03" name="Changes" comment="added perspective changing icons and actions (but designs r going to be changed)">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AppWindow.py" beforeDir="false" afterPath="$PROJECT_DIR$/AppWindow.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/korkino_model.dxf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/object_constructors.py" beforeDir="false" afterPath="$PROJECT_DIR$/object_constructors.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scene_objects.py" beforeDir="false" afterPath="$PROJECT_DIR$/scene_objects.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -199,13 +201,36 @@
       <option name="project" value="LOCAL" />
       <updated>1751812569754</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="added perspective changing icons and actions (but designs r going to be changed)">
+      <option name="closed" value="true" />
+      <created>1752004588254</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1752004588254</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
+    <option name="RECENT_FILTERS">
+      <map>
+        <entry key="Branch">
+          <value>
+            <list>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="HEAD" />
+                </option>
+              </RecentGroup>
+            </list>
+          </value>
+        </entry>
+      </map>
+    </option>
     <option name="TAB_STATES">
       <map>
         <entry key="MAIN">
@@ -227,13 +252,15 @@
     <MESSAGE value="Fix after merge" />
     <MESSAGE value="Mouse controls in progress (HUGE SUCCESS)" />
     <MESSAGE value="Added methods to set perspective from top, bottom and sides" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added methods to set perspective from top, bottom and sides" />
+    <MESSAGE value="added perspective changing icons and actions (but designs r going to be changed)" />
+    <option name="LAST_COMMIT_MESSAGE" value="added perspective changing icons and actions (but designs r going to be changed)" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/go3d$AppWindow.coverage" NAME="AppWindow Coverage Results" MODIFIED="1751881289507" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/GeoPhysProject$test.coverage" NAME="test Coverage Results" MODIFIED="1751660158438" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/GeoPhysProject$SceneObject.coverage" NAME="SceneObject Coverage Results" MODIFIED="1751630991809" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/go3d$main.coverage" NAME="main Coverage Results" MODIFIED="1751891965608" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/go3d$main.coverage" NAME="main Coverage Results" MODIFIED="1752007821167" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/GeoPhysProject$main.coverage" NAME="main Coverage Results" MODIFIED="1752003301006" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/go3d$test.coverage" NAME="test Coverage Results" MODIFIED="1751878485991" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
