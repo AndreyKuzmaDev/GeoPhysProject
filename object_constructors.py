@@ -14,9 +14,9 @@ def load_dxf_vertices(file_path, scale=1.0, normalize=False):
     msp = doc.modelspace()
 
     vertices = []
-    indices = []
+    indices_faces = []
     index_offset = 0
-    face_limit = 10
+    face_limit = 100000
     for e in msp.query('3DFACE'):
         if len(e.wcs_vertices(False)) != 3:
             continue
@@ -27,7 +27,7 @@ def load_dxf_vertices(file_path, scale=1.0, normalize=False):
         vertices.extend(pts)
 
         n = len(pts)
-        indices.extend([index_offset, index_offset + 1, index_offset + 2])
+        indices_faces.extend([index_offset, index_offset + 1, index_offset + 2])
         index_offset += n
         face_limit -= 1
         if face_limit == 0:
@@ -40,21 +40,29 @@ def load_dxf_vertices(file_path, scale=1.0, normalize=False):
         max_coords = vertices.max(axis=0)
         vertices = (vertices - min_coords) / (max_coords - min_coords)
 
-    indices = np.array(indices, dtype=np.uint32)
+    indices_faces = np.array(indices_faces, dtype=np.uint32)
+    indices_edges = np.array([])
+    for i in range(len(indices_faces) // 3):
+        indices_edges = np.append(indices_edges, indices_faces[3 * i])
+        indices_edges = np.append(indices_edges, indices_faces[3 * i + 1])
+        indices_edges = np.append(indices_edges, indices_faces[3 * i + 1])
+        indices_edges = np.append(indices_edges, indices_faces[3 * i + 2])
+        indices_edges = np.append(indices_edges, indices_faces[3 * i + 2])
+        indices_edges = np.append(indices_edges, indices_faces[3 * i])
 
-    return vertices, indices
+    return vertices, indices_faces, indices_edges
 
 
 def create_dxf_object(file_path):
-    vertices, indices = load_dxf_vertices(file_path, 1.0, True)
+    vertices, indices_faces, indices_edges = load_dxf_vertices(file_path, 1.0, True)
     print(vertices)
-    print(indices)
+    print(indices_faces)
 
     colors = np.tile(np.array([1.0, 0.0, 0.0], dtype=np.float32), (len(vertices), 1))
 
     vertVBO = vbo.VBO(vertices.flatten().astype(np.float32))
     colorVBO = vbo.VBO(colors.flatten().astype(np.float32))
-    mesh = ObjectMesh(vertVBO, colorVBO, gl.GL_TRIANGLES, indices)
+    mesh = ObjectMesh(vertVBO, colorVBO, gl.GL_TRIANGLES, indices_faces, indices_edges)
 
     min_v = vertices.min(axis=0)
     max_v = vertices.max(axis=0)
@@ -156,9 +164,8 @@ def create_test():
                                  (1, -1)).astype(np.float32))
 
     cubeClrArray = np.array(
-        [[1.0, 1.0, 0.0] for i in range(30)])
-    colorVBO = vbo.VBO(np.reshape(cubeClrArray,
-                                  (1, -1)).astype(np.float32))
+        [1.0 for i in range(90)])
+    colorVBO = vbo.VBO(cubeClrArray.astype(np.float32))
 
     cubeIdxArray = np.array(
         [0, 1, 3,
@@ -176,9 +183,10 @@ def create_test():
 
     cubeEdgesIdxArray = np.array(30 ** 2 // 2)
     for j in range(30):
-        for i in range(j):
+        for i in range(j + 1, 30):
             cubeEdgesIdxArray = np.append(cubeEdgesIdxArray, i)
-    mesh = ObjectMesh(vertVBO, colorVBO, gl.GL_TRIANGLES, cubeIdxArray, cubeEdgesIdxArray)
+            cubeEdgesIdxArray = np.append(cubeEdgesIdxArray, j)
+    mesh = ObjectMesh(vertVBO, colorVBO, gl.GL_TRIANGLES, cubeIdxArray.astype(np.uint32), cubeEdgesIdxArray.astype(np.uint32))
     collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
     obj = SceneObject(mesh, collision, np.array([0.5, 0.5, 0.5]))
 

@@ -177,8 +177,8 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glTranslate(*(obj.origin * -1))
 
         obj.mesh.verticesVBO.bind()
-        obj.mesh.colorsVBO.bind()
         gl.glVertexPointer(3, gl.GL_FLOAT, 0, obj.mesh.verticesVBO)
+        obj.mesh.colorsVBO.bind()
         gl.glColorPointer(3, gl.GL_FLOAT, 0, obj.mesh.colorsVBO)
 
         if self.ENABLE_EDGES and obj.mesh.edges is not None:
@@ -223,8 +223,6 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
         gl.glDisableClientState(gl.GL_COLOR_ARRAY)
 
-
-
         gl.glPopMatrix()
         gl.glPushMatrix()
 
@@ -232,22 +230,23 @@ class GLWidget(QtOpenGL.QGLWidget):
 
 
     def _init_geometry(self):
-        obj1 = create_test()
+        obj1 = create_dxf_object("../korkino_model.dxf")
         obj1.scale = np.array([1.0, 1.0, 1.0])
         obj1.location = np.array([0.0, 0.0, -50.00])
         obj1.calculate_matrix()
 
-        """obj2 = create_cube()
+        obj2 = create_cube()
         obj2.scale = np.array([1.0, 1.0, 1.0])
         obj2.location = np.array([2.0, 0.0, -50.0])
         obj2.calculate_matrix()
 
-        obj3 = create_dxf_object("../korkino_model.dxf")
+        """obj3 = create_dxf_object("../korkino_model.dxf")
         obj3.scale = np.array([1.0, 1.0, 1.0])
         obj3.location = np.array([4.0, 0.0, -50.0])
         obj3.calculate_matrix()"""
 
-        self.objects = {obj1.id : obj1}
+        self.objects = {obj1.id : obj1,
+                        obj2.id : obj2,}
 
         self.viewTarget = obj1
 
