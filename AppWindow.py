@@ -18,7 +18,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.glWidget = glWidget
 
         self.menuBar = self.menuBar()
+        self.menuToolBar = QtWidgets.QToolBar()
         self.initMenu()
+        self.initToolBar()
 
 
         self.treeView = QtWidgets.QTreeView()
@@ -80,6 +82,34 @@ class MainWindow(QtWidgets.QMainWindow):
         fileMenu.addAction(exitAction)
 
         optionsMenu.addAction(changeColorAction)
+    def initToolBar(self):
+        self.menuToolBar = QtWidgets.QToolBar('Меню с иконками')
+        self.menuToolBar.setMovable(False)
+        self.addToolBar(QtCore.Qt.TopToolBarArea, self.menuToolBar)
+        #self.insertToolBar(self.menuBar, self.menuToolBar)
+
+        icon1 = QtGui.QIcon('icons/x.png')
+        icon3 = QtGui.QIcon('icons/y.png')
+        icon2 = QtGui.QIcon('icons/z.png')
+
+        proj_yz = QtWidgets.QAction(icon1, '', self)
+        proj_yx = QtWidgets.QAction(icon2, '', self)
+        proj_zx = QtWidgets.QAction(icon3, '', self)
+
+        self.menuToolBar.setIconSize(QtCore.QSize(24, 24))
+        self.menuToolBar.addSeparator()
+
+        proj_yz.setToolTip('Вид сбоку')
+        proj_yx.setToolTip('Показать все')
+        proj_zx.setToolTip('Вид сверху')
+
+        proj_yx.triggered.connect(lambda val: self.glWidget.setArm(val))
+        proj_zx.triggered.connect(lambda checked: self.glWidget.setRotY(45))
+        proj_yz.triggered.connect(lambda val: self.glWidget.setRotX(val))
+
+        self.menuToolBar.addAction(proj_yx)
+        self.menuToolBar.addAction(proj_zx)
+        self.menuToolBar.addAction(proj_yz)
     def openFile(self):
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(None, "Выберите файл")
 
