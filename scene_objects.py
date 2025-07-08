@@ -2,6 +2,8 @@ import numpy as np
 from pyglm import glm
 from pyglm.glm import sin, cos
 
+from object_constructors import create_sphere
+
 # NEVER EVER interact with this var outside SceneObject class
 OBJECT_COUNT = 0
 
@@ -10,6 +12,7 @@ OBJECT_COUNT = 0
 class SceneObject:
     def __init__(self, mesh, collision, origin=np.array([0.0, 0.0, 0.0])):
         self.enabled = True
+        self.hover = False
 
         self.mesh = mesh
         self.collision = collision
@@ -40,4 +43,28 @@ class SceneObject:
                       0.0, 0.0, sz, 0.0,
                       0.0, 0.0, 0.0, 1.0)
         self.matrix = glm.transpose(R)
+
+
+    def on_hover(self):
+        self.hover = True
+        self.mesh.on_hover()
+
+
+    def on_unhover(self):
+        self.hover = False
+        self.mesh.on_unhover()
+
+
+class SceneEvent(SceneObject):
+    def __init__(self, time=0, magnitude=0, location_error=0, energy=0, l_param=0, event_type="Unknown"):
+        # mesh = create_sphere()
+
+        # SceneObject.__init__(self, mesh, collision, origin)
+        self.time = 0
+        self.magnitude = 0
+        self.type = "Unknown"
+        self.location_error = 0
+        self.energy = 0
+        self.L = 0
+
 
