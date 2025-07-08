@@ -14,24 +14,25 @@ def load_dxf_vertices(file_path, scale=1.0, normalize=False):
     msp = doc.modelspace()
 
     vertices = []
-    indices_faces = []
+    indices_faces_t = []
+    indices_faces_q = []
+    indices_edges = []
     index_offset = 0
-    face_limit = 100000
     for e in msp.query('3DFACE'):
-        if len(e.wcs_vertices(False)) != 3:
-            continue
-        pts = [(vertex.x, vertex.y, vertex.z) for vertex in e.wcs_vertices(False)]
+        pts = [(vertex.x, vertex.z, vertex.y) for vertex in e.wcs_vertices(False)]
 
         pts = np.array(pts, dtype=np.float32) * scale
         # print(pts)
         vertices.extend(pts)
 
         n = len(pts)
-        indices_faces.extend([index_offset, index_offset + 1, index_offset + 2])
+        if n == 3:
+            indices_faces_t.extend([index_offset, index_offset + 1, index_offset + 2])
+            indices_edges.extend([index_offset, index_offset + 1, index_offset + 1, index_offset + 2, index_offset + 2, index_offset])
+        elif n == 4:
+            indices_faces_q.extend([index_offset, index_offset + 1, index_offset + 2, index_offset + 3])
+            indices_edges.extend([index_offset, index_offset + 1, index_offset + 1, index_offset + 2, index_offset + 2, index_offset + 3, index_offset + 3, index_offset])
         index_offset += n
-        face_limit -= 1
-        if face_limit == 0:
-            break
 
     vertices = np.array(vertices, dtype=np.float32)
 
@@ -40,29 +41,30 @@ def load_dxf_vertices(file_path, scale=1.0, normalize=False):
         max_coords = vertices.max(axis=0)
         vertices = (vertices - min_coords) / (max_coords - min_coords)
 
-    indices_faces = np.array(indices_faces, dtype=np.uint32)
-    indices_edges = np.array([])
-    for i in range(len(indices_faces) // 3):
-        indices_edges = np.append(indices_edges, indices_faces[3 * i])
-        indices_edges = np.append(indices_edges, indices_faces[3 * i + 1])
-        indices_edges = np.append(indices_edges, indices_faces[3 * i + 1])
-        indices_edges = np.append(indices_edges, indices_faces[3 * i + 2])
-        indices_edges = np.append(indices_edges, indices_faces[3 * i + 2])
-        indices_edges = np.append(indices_edges, indices_faces[3 * i])
+    indices_faces_t = np.array(indices_faces_t, dtype=np.uint32)
+    indices_faces_q = np.array(indices_faces_q, dtype=np.uint32)
+    indices_edges = np.array(indices_edges, dtype=np.uint32)
 
-    return vertices, indices_faces, indices_edges
+    return vertices, indices_faces_t, indices_faces_q, indices_edges
 
 
-def create_dxf_object(file_path):
-    vertices, indices_faces, indices_edges = load_dxf_vertices(file_path, 1.0, True)
-    print(vertices)
-    print(indices_faces)
+def create_dxf_object(file_path, normalize=False):
+    vertices, indices_faces_t, indices_faces_q, indices_edges = load_dxf_vertices(file_path, 1.0, normalize)
 
-    colors = np.tile(np.array([1.0, 0.0, 0.0], dtype=np.float32), (len(vertices), 1))
+    colors = np.tile(np.array([0.6, 0.6, 0.6], dtype=np.float32), (len(vertices), 1))
+    colors_edges = np.tile(np.array([0.6, 1.0, 0.0], dtype=np.float32), (len(vertices), 1))
+    colors_hovered = np.tile(np.array([1.0, 0.5, 0.0], dtype=np.float32), (len(vertices), 1))
 
     vertVBO = vbo.VBO(vertices.flatten().astype(np.float32))
     colorVBO = vbo.VBO(colors.flatten().astype(np.float32))
-    mesh = ObjectMesh(vertVBO, colorVBO, gl.GL_TRIANGLES, indices_faces, indices_edges)
+
+    mesh = ObjectMesh(vertVBO, colorVBO, indices_faces_t, indices_faces_q, indices_edges)
+
+    mesh.colorsEdgesVBO = vbo.VBO(colors_edges.flatten().astype(np.float32))
+    mesh.colorsHoveredVBO = vbo.VBO(colors_hovered.flatten().astype(np.float32))
+    mesh.colorsSelectedVBO = vbo.VBO(colors_hovered.flatten().astype(np.float32))
+    mesh.colorsEdgesActiveVBO = vbo.VBO(colors_edges.flatten().astype(np.float32))
+    mesh.enableFaces = True
 
     min_v = vertices.min(axis=0)
     max_v = vertices.max(axis=0)
@@ -71,12 +73,12 @@ def create_dxf_object(file_path):
     center = (min_v + max_v) / 2.0
 
     obj = SceneObject(mesh, collision, center)
-
+    print(f"Created dxf object with {len(vertices)} vertices")
     return obj
 
 
 def create_cube():
-    cubeClrArray = np.array(
+    colors = np.array(
         [[0.0, 0.0, 0.0],
          [1.0, 0.0, 0.0],
          [1.0, 1.0, 0.0],
@@ -85,28 +87,35 @@ def create_cube():
          [1.0, 0.0, 1.0],
          [1.0, 1.0, 1.0],
          [0.0, 1.0, 1.0]])
-    colorVBO = vbo.VBO(np.reshape(cubeClrArray,
+    colorVBO = vbo.VBO(np.reshape(colors,
                                   (1, -1)).astype(np.float32))
 
-    cubeIdxArray = np.array(
+    colors_edges = np.tile(np.array([1.0, 1.0, 1.0], dtype=np.float32), (8, 1))
+    colors_hovered = np.tile(np.array([1.0, 0.5, 0.0], dtype=np.float32), (8, 1))
+
+    vertices = np.array(
+        [[0.0, 0.0, 0.0],
+         [1.0, 0.0, 0.0],
+         [1.0, 1.0, 0.0],
+         [0.0, 1.0, 0.0],
+         [0.0, 0.0, 1.0],
+         [1.0, 0.0, 1.0],
+         [1.0, 1.0, 1.0],
+         [0.0, 1.0, 1.0]])
+    vertVBO = vbo.VBO(np.reshape(vertices,
+                                 (1, -1)).astype(np.float32))
+
+    indices_triangles = None
+
+    indices_quads = np.array(
         [0, 1, 2, 3,
          3, 2, 6, 7,
          1, 0, 4, 5,
          2, 1, 5, 6,
          0, 3, 7, 4,
          7, 6, 5, 4])
-    cubeVtxArray = np.array(
-        [[0.0, 0.0, 0.0],
-         [1.0, 0.0, 0.0],
-         [1.0, 1.0, 0.0],
-         [0.0, 1.0, 0.0],
-         [0.0, 0.0, 1.0],
-         [1.0, 0.0, 1.0],
-         [1.0, 1.0, 1.0],
-         [0.0, 1.0, 1.0]])
-    vertVBO = vbo.VBO(np.reshape(cubeVtxArray,
-                                 (1, -1)).astype(np.float32))
-    cubeEdgesIdxArray = np.array(
+
+    indices_edges = np.array(
         [0, 1,
          1, 2,
          2, 3,
@@ -121,73 +130,85 @@ def create_cube():
          7, 4]
     )
 
-    mesh = ObjectMesh(vertVBO, colorVBO, gl.GL_QUADS, cubeIdxArray, cubeEdgesIdxArray)
-    collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
-    obj = SceneObject(mesh, collision, np.array([0.5, 0.5, 0.5]))
+    mesh = ObjectMesh(vertVBO, colorVBO, indices_triangles, indices_quads, indices_edges)
 
+    mesh.colorsEdgesVBO = vbo.VBO(colors_edges.flatten().astype(np.float32))
+    mesh.colorsHoveredVBO = vbo.VBO(colors_hovered.flatten().astype(np.float32))
+    mesh.colorsSelectedVBO = vbo.VBO(colors_hovered.flatten().astype(np.float32))
+    mesh.colorsEdgesActiveVBO = vbo.VBO(colors_edges.flatten().astype(np.float32))
+
+    mesh.enableFaces = True
+    collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
+    origin = np.array([0.5, 0.5, 0.5])
+
+    obj = SceneObject(mesh, collision, origin)
     return obj
 
 
-def create_test():
-    cubeVtxArray = np.array(
-        [[0.4017314, 0.0, 0.06345682],
-         [0.3172672, 0.36789298, 0.05736027],
-         [0.51240057, 0.04785181, 0.08870859],
-         [0.51240057, 0.04785181, 0.08870859],
-         [0.5036266, 0.61435556, 0.10527653],
-         [0.71911556, 0.19192179, 0.13765411],
-         [0.71911556, 0.19192179, 0.13765411],
-         [0.6084464, 0.71983534, 0.13115488],
-         [0.87342066, 0.3326473, 0.17527585],
-         [0.87342066, 0.3326473, 0.17527585],
-         [0.7525737, 0.77437615, 0.16378084],
-         [1.0, 0.49909955, 0.20780772],
-         [0.13453439, 0.47182918, 0.70687443],
-         [0.22999533, 0.29765886, 0.03636856],
-         [0.20870379, 0.48675072, 0.7399802],
-         [0.20870379, 0.48675072, 0.7399802],
-         [0.3172672, 0.36789298, 0.05736027],
-         [0.31434253, 0.556213, 0.7898082],
-         [0.31434253, 0.556213, 0.7898082],
-         [0.5036266, 0.61435556, 0.10527653],
-         [0.36932614, 0.63184977, 0.8178486],
-         [0.5036266, 0.61435556, 0.10527653],
-         [0.431095, 0.7949576, 0.8536696],
-         [0.6084464, 0.71983534, 0.13115488],
-         [0.05217595, 0.48392075, 0.67166686],
-         [0.06832007, 0.24311809, 0.0],
-         [0.0, 0.53434527, 0.65175706],
-         [0.6137108, 0.9760741, 0.9430838],
-         [0.7525737, 0.77437615, 0.16378084],
-         [0.741343, 1.0, 1.0]])
-    vertVBO = vbo.VBO(np.reshape(cubeVtxArray,
-                                 (1, -1)).astype(np.float32))
+# Я сделал это через DeepSeek и мне почти не стыдно
+def create_sphere(meridians=16, parallels=16):
+    vertices = []
+    for i in range(parallels + 1):
+        theta = i * np.pi / parallels
+        for j in range(meridians):
+            phi = j * 2 * np.pi / meridians
+            x = np.sin(theta) * np.cos(phi)
+            y = np.sin(theta) * np.sin(phi)
+            z = np.cos(theta)
+            vertices.append([x, y, z])
 
-    cubeClrArray = np.array(
-        [1.0 for i in range(90)])
-    colorVBO = vbo.VBO(cubeClrArray.astype(np.float32))
+    vertices = np.array(vertices, dtype=np.float32)
 
-    cubeIdxArray = np.array(
-        [0, 1, 3,
-         1, 2, 3,
-         3, 2, 7,
-         2, 6, 7,
-         1, 0, 5,
-         0, 4, 5,
-         2, 1, 6,
-         1, 5, 6,
-         0, 3, 4,
-         3, 7, 4,
-         7, 6, 4,
-         6, 5, 4])
+    vertices = vertices / 2 + 0.5
 
-    cubeEdgesIdxArray = np.array(30 ** 2 // 2)
-    for j in range(30):
-        for i in range(j + 1, 30):
-            cubeEdgesIdxArray = np.append(cubeEdgesIdxArray, i)
-            cubeEdgesIdxArray = np.append(cubeEdgesIdxArray, j)
-    mesh = ObjectMesh(vertVBO, colorVBO, gl.GL_TRIANGLES, cubeIdxArray.astype(np.uint32), cubeEdgesIdxArray.astype(np.uint32))
+    vertVBO = vbo.VBO(vertices.flatten().astype(np.float32))
+
+    colors = np.zeros((len(vertices), 3), dtype=np.float32)
+    for i in range(len(vertices)):
+        colors[i] = [0.5, 0.5, 0.5]
+    colorVBO = vbo.VBO(colors.flatten().astype(np.float32))
+
+    indices_triangles = []
+    for i in range(parallels):
+        for j in range(meridians):
+            a = i * meridians + j
+            b = i * meridians + (j + 1) % meridians
+            c = (i + 1) * meridians + j
+            d = (i + 1) * meridians + (j + 1) % meridians
+
+            indices_triangles.extend([a, b, c])
+            indices_triangles.extend([b, d, c])
+
+    indices_triangles = np.array(indices_triangles, dtype=np.uint32)
+
+    indices_edges = []
+    for i in range(parallels):
+        for j in range(meridians):
+            current = i * meridians + j
+            next_j = i * meridians + (j + 1) % meridians
+            next_i = (i + 1) * meridians + j if i < parallels - 1 else None
+
+            indices_edges.extend([current, next_j])
+
+            if next_i is not None:
+                indices_edges.extend([current, next_i])
+
+    indices_edges = np.array(indices_edges, dtype=np.uint32)
+
+    mesh = ObjectMesh(vertVBO, colorVBO, indices_triangles, None, indices_edges)
+
+    colors_edges = np.tile(np.array([1.0, 1.0, 1.0], dtype=np.float32), (len(vertices), 1))
+    colors_hovered = np.tile(np.array([1.0, 0.5, 0.0], dtype=np.float32), (len(vertices), 1))
+
+    mesh.colorsEdgesVBO = vbo.VBO(colors_edges.flatten().astype(np.float32))
+    mesh.colorsHoveredVBO = vbo.VBO(colors_hovered.flatten().astype(np.float32))
+    mesh.colorsSelectedVBO = vbo.VBO(colors_hovered.flatten().astype(np.float32))
+    mesh.colorsEdgesActiveVBO = vbo.VBO(colors_edges.flatten().astype(np.float32))
+
+    mesh.enableFaces = True
+
     collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
-    obj = SceneObject(mesh, collision, np.array([0.5, 0.5, 0.5]))
+    origin = np.array([0.5, 0.5, 0.5])
 
+    obj = SceneObject(mesh, collision, origin)
     return obj

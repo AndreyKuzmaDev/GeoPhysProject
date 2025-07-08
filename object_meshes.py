@@ -1,12 +1,25 @@
 import numpy as np
 
 class ObjectMesh:
-    def __init__(self, vertices, colors, surface_mode, faces=None, edges=None):
+    def __init__(self, vertices, colors, faces_t=None, faces_q=None, edges=None):
+        self.enableFaces = False
+        self.enableEdges = True
+
         self.verticesVBO = vertices
-        self.colorsVBO = colors
-        self.faces = faces
+        self.colorsFacesVBO = colors
+        self.colorsEdgesVBO = colors
+        self.colorsHoveredVBO = colors
+        self.colorsSelectedVBO = colors
+        self.colorsEdgesActiveVBO = colors
+
+        self.facesQuads = faces_q
+        self.facesTriangles = faces_t
         self.edges = edges
 
-        self.surface_mode = surface_mode
         self.enabled = True
 
+    def on_hover(self):
+        self.colorsEdgesActiveVBO = self.colorsHoveredVBO
+
+    def on_unhover(self):
+        self.colorsEdgesActiveVBO = self.colorsEdgesVBO

@@ -16,7 +16,7 @@ from AppWindow import MainWindow
 import math
 import sys  # we'll need this later to run our Qt application
 
-from object_constructors import create_cube, create_dxf_object, create_test
+from object_constructors import create_cube, create_dxf_object, create_sphere
 from utilities import screen_pos_to_vector
 
 
@@ -26,7 +26,7 @@ class GLWidget(QtOpenGL.QGLWidget):
     ROT_Y_MAX = math.pi * (359.9 / 360)
 
     ARM_MIN = 5
-    ARM_MAX = 100
+    ARM_MAX = 10000
 
     SENSITIVITY_X = 360
     SENSITIVITY_Y = 480
@@ -35,10 +35,11 @@ class GLWidget(QtOpenGL.QGLWidget):
     FIELD_OF_VIEW = 60.0
     ASPECT_RATIO = 1.0
     RENDER_DISTANCE_NEAR = 1.0
-    RENDER_DISTANCE_FAR = 10000.0
+    RENDER_DISTANCE_FAR = 100000.0
 
     ENABLE_EDGES = True
-    ENABLE_FACES = False
+    ENABLE_FACES = True
+    ENABLE_HOVER = False
 
     def __init__(self, parent=None):
         self.parent = parent
@@ -54,9 +55,10 @@ class GLWidget(QtOpenGL.QGLWidget):
 
         self.objects = []
         self.pickedObjects = []
-        self.hoveredObject = None
-        self.viewTarget = None
+        self.hoveredObject = -1
+        self.viewTarget = -1
 
+        self.mousePos = (0, 0)
         self.mouseCaptured = False
         self.mouseCapturedEvent = None
         self.mousePrevEvent = None
@@ -64,12 +66,11 @@ class GLWidget(QtOpenGL.QGLWidget):
         QtOpenGL.QGLWidget.__init__(self, parent)
 
     def initializeGL(self):
-        self.qglClearColor(QtGui.QColor(135, 206, 235))
+        self.qglClearColor(QtGui.QColor(10, 10, 30))
         gl.glEnable(gl.GL_DEPTH_TEST)
 
         self._init_geometry()
         gl.glPushMatrix()
-
 
     def resizeGL(self, width, height):
         gl.glViewport(0, 0, width, height)
@@ -80,7 +81,6 @@ class GLWidget(QtOpenGL.QGLWidget):
         GLU.gluPerspective(self.FIELD_OF_VIEW, self.ASPECT_RATIO, self.RENDER_DISTANCE_NEAR, self.RENDER_DISTANCE_FAR)
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
-
     def mousePressEvent(self, a0):
         self.mouseCaptured = True
 
@@ -88,18 +88,16 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.mousePrevEvent = (a0.x(), a0.y())
         # print("Pressed", a0.x(), a0.y())
 
-
     def mouseMoveEvent(self, a0):
-        if not self.mouseCaptured:
-            return
-        dx, dy = a0.x() - self.mousePrevEvent[0], a0.y() - self.mousePrevEvent[1]
+        self.mousePos = (a0.x(), a0.y())
+        if self.mouseCaptured:
+            dx, dy = a0.x() - self.mousePrevEvent[0], a0.y() - self.mousePrevEvent[1]
 
-        if max(abs(dx), abs(dy)) > 0:
-            # print("Moved", dx, dy)
-            self.addRotX(dx)
-            self.addRotY(dy)
-            self.mousePrevEvent = (a0.x(), a0.y())
-
+            if max(abs(dx), abs(dy)) > 0:
+                # print("Moved", dx, dy)
+                self.addRotX(dx)
+                self.addRotY(dy)
+                self.mousePrevEvent = (a0.x(), a0.y())
 
     def mouseReleaseEvent(self, a0):
         clicked = self.mousePrevEvent == self.mouseCapturedEvent
@@ -113,27 +111,17 @@ class GLWidget(QtOpenGL.QGLWidget):
             self.mouseClickEvent(a0)
         # print("Released", a0.x(), a0.y())
 
-
     def mouseClickEvent(self, a0):
-        cam = glm.vec3([self.camX, self.camY, self.camZ])
-        direction = screen_pos_to_vector(a0.x(), a0.y(), self.width(), self.height(), cam, glm.vec3(self.viewTarget.location))
-        dir_t = glm.normalize(glm.vec3(self.viewTarget.location) - glm.vec3([self.camX, self.camY, self.camZ]))
-
-        print(direction, dir_t)
-        for obj in self.objects:
-            if self.objects[obj].enabled and self.objects[obj].collision.enabled:
-                if self.check_collision(direction, self.objects[obj]) > 0.0:
-                    print(obj)
+        pass
 
     def wheelEvent(self, a0):
         if not self.mouseCaptured:
             return
 
         da = a0.angleDelta().y() / 15 / 8 * self.SENSITIVITY_ARM
-        self.armLength = max(self.ARM_MIN, min(self.ARM_MAX, self.armLength - da))
+        self.armLength = max(self.ARM_MIN, min(self.ARM_MAX, int(self.armLength - max(da * 0.02 * self.armLength, da / 5, key=math.fabs))))
 
-
-    def check_collision(self, direction, obj):
+    def check_collision_object(self, direction, obj):
         tMin = self.RENDER_DISTANCE_NEAR
         tMax = self.RENDER_DISTANCE_FAR
         obj_pos = glm.vec3([obj.matrix[3].x, obj.matrix[3].y, obj.matrix[3].z])
@@ -164,7 +152,32 @@ class GLWidget(QtOpenGL.QGLWidget):
                     return -1.0
         return tMin
 
+    def check_collision(self):
+        cam = glm.vec3([self.camX, self.camY, self.camZ])
+        direction = screen_pos_to_vector(self.mousePos[0], self.mousePos[1], self.width(), self.height(), cam,
+                                         glm.vec3(self.viewTarget.location))
 
+        obj_id = -1
+        dist = self.RENDER_DISTANCE_FAR * 2
+
+        for obj in self.objects:
+            if self.objects[obj].enabled and self.objects[obj].collision.enabled:
+                cur = self.check_collision_object(direction, self.objects[obj])
+                if 0.0 < cur < dist:
+                    obj_id = obj
+                    dist = cur
+
+
+        if obj_id == -1 and self.hoveredObject != -1:
+            self.objects[self.hoveredObject].on_unhover()
+            self.hoveredObject = -1
+        elif obj_id != self.hoveredObject and self.hoveredObject != -1:
+            self.objects[self.hoveredObject].on_unhover()
+            self.hoveredObject = obj_id
+            self.objects[obj_id].on_hover()
+        elif obj_id != self.hoveredObject and self.hoveredObject == -1:
+            self.hoveredObject = obj_id
+            self.objects[obj_id].on_hover()
 
     def draw_object(self, obj):
         gl.glPushMatrix()
@@ -178,19 +191,31 @@ class GLWidget(QtOpenGL.QGLWidget):
 
         obj.mesh.verticesVBO.bind()
         gl.glVertexPointer(3, gl.GL_FLOAT, 0, obj.mesh.verticesVBO)
-        obj.mesh.colorsVBO.bind()
-        gl.glColorPointer(3, gl.GL_FLOAT, 0, obj.mesh.colorsVBO)
 
-        if self.ENABLE_EDGES and obj.mesh.edges is not None:
+
+        if self.ENABLE_FACES and (obj.mesh.facesQuads is not None or obj.mesh.facesTriangles is not None) and obj.mesh.enableFaces:
+            obj.mesh.colorsFacesVBO.bind()
+            gl.glColorPointer(3, gl.GL_FLOAT, 0, obj.mesh.colorsFacesVBO)
+
+            if obj.mesh.facesTriangles is not None:
+                gl.glDrawElements(gl.GL_TRIANGLES, len(obj.mesh.facesTriangles), gl.GL_UNSIGNED_INT,
+                                  obj.mesh.facesTriangles)
+
+            if obj.mesh.facesQuads is not None:
+                gl.glDrawElements(gl.GL_QUADS, len(obj.mesh.facesQuads), gl.GL_UNSIGNED_INT,
+                                  obj.mesh.facesQuads)
+
+            obj.mesh.colorsFacesVBO.unbind()
+
+        if obj.hover or self.ENABLE_EDGES and obj.mesh.edges is not None and obj.mesh.enableEdges:
+            obj.mesh.colorsEdgesActiveVBO.bind()
+            gl.glColorPointer(3, gl.GL_FLOAT, 0, obj.mesh.colorsEdgesActiveVBO)
             gl.glDrawElements(gl.GL_LINES, len(obj.mesh.edges), gl.GL_UNSIGNED_INT, obj.mesh.edges)
-        if self.ENABLE_FACES and obj.mesh.faces is not None:
-            gl.glDrawElements(obj.mesh.surface_mode, len(obj.mesh.faces), gl.GL_UNSIGNED_INT, obj.mesh.faces)
+            obj.mesh.colorsEdgesActiveVBO.unbind()
 
         obj.mesh.verticesVBO.unbind()
-        obj.mesh.colorsVBO.unbind()
 
         gl.glPopMatrix()
-
 
     def _compute_camera(self):
         if self.viewTarget is not None:
@@ -199,19 +224,17 @@ class GLWidget(QtOpenGL.QGLWidget):
             self.camY = y + self.armLength * math.cos(self.rotY)
             self.camZ = z + self.armLength * math.sin(self.rotY) * math.sin(self.rotX)
 
-
-
     def _position_camera(self):
         if self.viewTarget is not None:
             x, y, z = self.viewTarget.location
             GLU.gluLookAt(self.camX, self.camY, self.camZ, x, y, z, 0.0, 1.0, 0.0)
 
-
     def paintGL(self):
-
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
         self._compute_camera()
+        if self.ENABLE_HOVER:
+            self.check_collision()
 
         gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
         gl.glEnableClientState(gl.GL_COLOR_ARRAY)
@@ -228,9 +251,8 @@ class GLWidget(QtOpenGL.QGLWidget):
 
         self._position_camera()
 
-
     def _init_geometry(self):
-        obj1 = create_dxf_object("../korkino_model.dxf")
+        obj1 = create_dxf_object("../korkino_model.dxf", True)
         obj1.scale = np.array([1.0, 1.0, 1.0])
         obj1.location = np.array([0.0, 0.0, -50.00])
         obj1.calculate_matrix()
@@ -240,13 +262,14 @@ class GLWidget(QtOpenGL.QGLWidget):
         obj2.location = np.array([2.0, 0.0, -50.0])
         obj2.calculate_matrix()
 
-        """obj3 = create_dxf_object("../korkino_model.dxf")
+        obj3 = create_sphere()
         obj3.scale = np.array([1.0, 1.0, 1.0])
         obj3.location = np.array([4.0, 0.0, -50.0])
-        obj3.calculate_matrix()"""
+        obj3.calculate_matrix()
 
         self.objects = {obj1.id : obj1,
-                        obj2.id : obj2,}
+                        obj2.id : obj2,
+                        obj3.id : obj3}
 
         self.viewTarget = obj1
 
@@ -254,16 +277,13 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.rotX = 0.0
         self.rotY = self.ROT_Y_MIN
 
-
     def set_perspective_side(self, side=0):
         self.rotX = math.pi * side / 2
         self.rotY = math.pi / 2
 
-
     def set_perspective_bottom(self):
         self.rotX = 0.0
         self.rotY = self.ROT_Y_MAX
-
 
     def setRotX(self, val):
         self.rotX = math.pi * (val / 180)
