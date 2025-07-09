@@ -53,10 +53,10 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.camY = 0.0
         self.camZ = 0.0
 
-        self.objects = []
+        self.objects = {}
         self.pickedObjects = []
         self.hoveredObject = -1
-        self.viewTarget = -1
+        self.viewTarget = None
 
         self.mousePos = (0, 0)
         self.mouseCaptured = False
@@ -69,7 +69,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.qglClearColor(QtGui.QColor(152, 221, 250))
         gl.glEnable(gl.GL_DEPTH_TEST)
 
-        self._init_geometry()
+        #self._init_geometry("../korkino_model.dxf")
         gl.glPushMatrix()
 
     def resizeGL(self, width, height):
@@ -251,12 +251,12 @@ class GLWidget(QtOpenGL.QGLWidget):
 
         self._position_camera()
 
-    def _init_geometry(self):
-        obj1 = create_dxf_object("../korkino_model.dxf", True)
+    def _init_geometry(self, filepath):
+        obj1 = create_dxf_object(filepath, False)
         obj1.scale = np.array([1.0, 1.0, 1.0])
         obj1.location = np.array([0.0, 0.0, -50.00])
         obj1.calculate_matrix()
-
+        '''
         obj2 = create_cube()
         obj2.scale = np.array([1.0, 1.0, 1.0])
         obj2.location = np.array([2.0, 0.0, -50.0])
@@ -265,11 +265,9 @@ class GLWidget(QtOpenGL.QGLWidget):
         obj3 = create_sphere()
         obj3.scale = np.array([1.0, 1.0, 1.0])
         obj3.location = np.array([4.0, 0.0, -50.0])
-        obj3.calculate_matrix()
+        obj3.calculate_matrix()'''
 
-        self.objects = {obj1.id : obj1,
-                        obj2.id : obj2,
-                        obj3.id : obj3}
+        self.objects = {obj1.id : obj1}
 
         self.viewTarget = obj1
 

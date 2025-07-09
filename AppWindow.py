@@ -23,6 +23,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.initToolBar()
 
 
+
         self.treeView = QtWidgets.QTreeView()
         self.model = QtGui.QStandardItemModel()
         self.model.setHorizontalHeaderLabels(["Открытые проекты"])
@@ -35,6 +36,17 @@ class MainWindow(QtWidgets.QMainWindow):
         folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Выберите папку")
         if not folder_path:
             return
+
+
+        dxf_file = None
+        for entry in os.listdir(folder_path):
+            if entry.lower().endswith('.dxf'):
+                dxf_file = os.path.join(folder_path, entry)
+                break
+
+        if dxf_file:
+            # Передать найденный dxf файл в функцию инициализации геометрии
+            self.glWidget._init_geometry(dxf_file)
 
         rootNode = self.model.invisibleRootItem()
         project_item = QtGui.QStandardItem(os.path.basename(folder_path))
@@ -58,13 +70,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         item = self.model.itemFromIndex(index)
 
-        # Если проект — корневой элемент (проверка по необходимости)
         parent = item.parent()
         if parent is None:
-            # Удаляем корневую папку из модели
             self.model.removeRow(item.row())
         else:
-            # Тут можно добавить логику, если хотите закрывать не только корень
             QtWidgets.QMessageBox.warning(self, "Ошибка", "Выделена не корневая папка")
     def initMenu(self):
         fileMenu = self.menuBar.addMenu('Файл')
@@ -104,8 +113,8 @@ class MainWindow(QtWidgets.QMainWindow):
         proj_zx.setToolTip('Вид сверху')
 
         proj_yx.triggered.connect(lambda val: self.glWidget.setArm(val))
-        proj_zx.triggered.connect(lambda checked: self.glWidget.setRotY(45))
-        proj_yz.triggered.connect(lambda val: self.glWidget.setRotX(val))
+        proj_zx.triggered.connect(lambda checked: self.glWidget.set_perspective_top())
+        proj_yz.triggered.connect(lambda val: self.glWidget.set_perspective_side())
 
         self.menuToolBar.addAction(proj_yx)
         self.menuToolBar.addAction(proj_zx)
@@ -127,20 +136,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         right_layout.addWidget(self.glWidget, 5)
 
-        sliderX = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        sliderX.setMinimum(0)
-        sliderX.setMaximum(360)
-        sliderX.valueChanged.connect(lambda val: self.glWidget.setRotX(val))
 
-        sliderY = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        sliderY.setMinimum(1)
-        sliderY.setMaximum(359)
-        sliderY.valueChanged.connect(lambda val: self.glWidget.setRotY(val))
-        sliderZ = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        sliderZ.valueChanged.connect(lambda val: self.glWidget.setArm(val))
-
-        for slider in (sliderX, sliderY, sliderZ):
-            right_layout.addWidget(slider)
 
         gui_layout.addLayout(right_layout, 3)
 
