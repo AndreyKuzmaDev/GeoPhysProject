@@ -16,7 +16,8 @@ from AppWindow import MainWindow
 import math
 import sys  # we'll need this later to run our Qt application
 
-from object_constructors import create_cube, create_dxf_object, create_sphere
+from object_constructors import create_cube, create_dxf_object, create_sphere, create_pyramid, create_detector, \
+    create_event
 from utilities import screen_pos_to_vector
 
 
@@ -35,7 +36,7 @@ class GLWidget(QtOpenGL.QGLWidget):
     FIELD_OF_VIEW = 60.0
     ASPECT_RATIO = 1.0
     RENDER_DISTANCE_NEAR = 1.0
-    RENDER_DISTANCE_FAR = 100000.0
+    RENDER_DISTANCE_FAR = 1000000.0
 
     ENABLE_EDGES = True
     ENABLE_FACES = True
@@ -115,9 +116,6 @@ class GLWidget(QtOpenGL.QGLWidget):
         pass
 
     def wheelEvent(self, a0):
-        if not self.mouseCaptured:
-            return
-
         da = a0.angleDelta().y() / 15 / 8 * self.SENSITIVITY_ARM
         self.armLength = max(self.ARM_MIN, min(self.ARM_MAX, int(self.armLength - max(da * 0.02 * self.armLength, da / 5, key=math.fabs))))
 
@@ -187,15 +185,14 @@ class GLWidget(QtOpenGL.QGLWidget):
         gl.glRotatef(obj.rotation[1], 0.0, 1.0, 0.0)
         gl.glRotatef(obj.rotation[2], 0.0, 0.0, 1.0)
         gl.glScale(*obj.scale)
-        gl.glTranslate(*(obj.origin * -1))
-
+        # gl.glTranslate(*(obj.origin * -1))
         obj.mesh.verticesVBO.bind()
         gl.glVertexPointer(3, gl.GL_FLOAT, 0, obj.mesh.verticesVBO)
 
 
         if self.ENABLE_FACES and (obj.mesh.facesQuads is not None or obj.mesh.facesTriangles is not None) and obj.mesh.enableFaces:
             obj.mesh.colorsFacesVBO.bind()
-            gl.glColorPointer(3, gl.GL_FLOAT, 0, obj.mesh.colorsFacesVBO)
+            gl.glColorPointer(4, gl.GL_FLOAT, 0, obj.mesh.colorsFacesVBO)
 
             if obj.mesh.facesTriangles is not None:
                 gl.glDrawElements(gl.GL_TRIANGLES, len(obj.mesh.facesTriangles), gl.GL_UNSIGNED_INT,
@@ -219,14 +216,14 @@ class GLWidget(QtOpenGL.QGLWidget):
 
     def _compute_camera(self):
         if self.viewTarget is not None:
-            x, y, z = self.viewTarget.location
+            x, y, z = self.viewTarget.location + self.viewTarget.origin
             self.camX = x + self.armLength * math.sin(self.rotY) * math.cos(self.rotX)
             self.camY = y + self.armLength * math.cos(self.rotY)
             self.camZ = z + self.armLength * math.sin(self.rotY) * math.sin(self.rotX)
 
     def _position_camera(self):
         if self.viewTarget is not None:
-            x, y, z = self.viewTarget.location
+            x, y, z = self.viewTarget.location + self.viewTarget.origin
             GLU.gluLookAt(self.camX, self.camY, self.camZ, x, y, z, 0.0, 1.0, 0.0)
 
     def paintGL(self):
@@ -251,23 +248,47 @@ class GLWidget(QtOpenGL.QGLWidget):
 
         self._position_camera()
 
+    def add_object_dxf(self, filepath):
+        obj = create_dxf_object(filepath, False)
+        obj.scale = np.array([1.0, 1.0, 1.0])
+        obj.calculate_matrix()
+
+        self.objects[obj.id] = obj
+        self.viewTarget = obj
+
+    def add_object_detector(self, det_id, x, y, z):
+        obj = create_detector(det_id, x, y, z)
+        obj.scale = np.array([50.0, 50.0, 50.0])
+        obj.calculate_matrix()
+
+        self.objects[obj.id] = obj
+
+    def add_object_event(self, x, y, z, event_type, energy):
+        obj = create_event(x, y, z, event_type)
+        s = math.fabs(math.log(energy)) * 10
+        obj.scale = np.array([s, s, s])
+        obj.calculate_matrix()
+
+        self.objects[obj.id] = obj
+
     def _init_geometry(self, filepath):
         obj1 = create_dxf_object(filepath, False)
         obj1.scale = np.array([1.0, 1.0, 1.0])
         obj1.location = np.array([0.0, 0.0, -50.00])
         obj1.calculate_matrix()
-        '''
-        obj2 = create_cube()
+
+        obj2 = create_pyramid()
         obj2.scale = np.array([1.0, 1.0, 1.0])
         obj2.location = np.array([2.0, 0.0, -50.0])
         obj2.calculate_matrix()
-
+        '''
         obj3 = create_sphere()
         obj3.scale = np.array([1.0, 1.0, 1.0])
         obj3.location = np.array([4.0, 0.0, -50.0])
         obj3.calculate_matrix()'''
 
-        self.objects = {obj1.id : obj1}
+        self.objects = {obj1.id : obj1,
+                        obj2.id : obj2,}
 
         self.viewTarget = obj1
 

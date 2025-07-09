@@ -51,9 +51,9 @@ def load_dxf_vertices(file_path, scale=1.0, normalize=False):
 def create_dxf_object(file_path, normalize=False):
     vertices, indices_faces_t, indices_faces_q, indices_edges = load_dxf_vertices(file_path, 1.0, normalize)
 
-    colors = np.tile(np.array([0.3, 0.3, 0.3], dtype=np.float32), (len(vertices), 1))
-    colors_edges = np.tile(np.array([0.3, 0.3, 0.3], dtype=np.float32), (len(vertices), 1))
-    colors_hovered = np.tile(np.array([0.3, 0.3, 0.3], dtype=np.float32), (len(vertices), 1))
+    colors = np.tile(np.array([0.3, 0.3, 0.3, 0.1], dtype=np.float32), (len(vertices), 1))
+    colors_edges = np.tile(np.array([1.0, 1.0, 1.0], dtype=np.float32), (len(vertices), 1))
+    colors_hovered = np.tile(np.array([1.0, 0.5, 0.0], dtype=np.float32), (len(vertices), 1))
 
     vertVBO = vbo.VBO(vertices.flatten().astype(np.float32))
     colorVBO = vbo.VBO(colors.flatten().astype(np.float32))
@@ -79,14 +79,14 @@ def create_dxf_object(file_path, normalize=False):
 
 def create_cube():
     colors = np.array(
-        [[0.0, 0.0, 0.0],
-         [1.0, 0.0, 0.0],
-         [1.0, 1.0, 0.0],
-         [0.0, 1.0, 0.0],
-         [0.0, 0.0, 1.0],
-         [1.0, 0.0, 1.0],
-         [1.0, 1.0, 1.0],
-         [0.0, 1.0, 1.0]])
+        [[0.0, 0.0, 0.0, 1.0],
+         [1.0, 0.0, 0.0, 1.0],
+         [1.0, 1.0, 0.0, 1.0],
+         [0.0, 1.0, 0.0, 1.0],
+         [0.0, 0.0, 1.0, 1.0],
+         [1.0, 0.0, 1.0, 1.0],
+         [1.0, 1.0, 1.0, 1.0],
+         [0.0, 1.0, 1.0, 1.0]])
     colorVBO = vbo.VBO(np.reshape(colors,
                                   (1, -1)).astype(np.float32))
 
@@ -146,7 +146,7 @@ def create_cube():
 
 
 # Я сделал это через DeepSeek и мне почти не стыдно
-def create_sphere(meridians=16, parallels=16):
+def create_sphere(meridians=16, parallels=16, color=[1.0, 0.0, 0.0, 1.0]):
     vertices = []
     for i in range(parallels + 1):
         theta = i * np.pi / parallels
@@ -163,9 +163,9 @@ def create_sphere(meridians=16, parallels=16):
 
     vertVBO = vbo.VBO(vertices.flatten().astype(np.float32))
 
-    colors = np.zeros((len(vertices), 3), dtype=np.float32)
+    colors = np.zeros((len(vertices), 4), dtype=np.float32)
     for i in range(len(vertices)):
-        colors[i] = [0.5, 0.5, 0.5]
+        colors[i] = color
     colorVBO = vbo.VBO(colors.flatten().astype(np.float32))
 
     indices_triangles = []
@@ -206,9 +206,84 @@ def create_sphere(meridians=16, parallels=16):
     mesh.colorsEdgesActiveVBO = vbo.VBO(colors_edges.flatten().astype(np.float32))
 
     mesh.enableFaces = True
+    mesh.enableEdges = False
 
     collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
     origin = np.array([0.5, 0.5, 0.5])
 
     obj = SceneObject(mesh, collision, origin)
     return obj
+
+
+def create_pyramid():
+    colors = np.tile(np.array([1.0, 0.0, 1.0, 0.1], dtype=np.float32), (5, 1))
+    colorVBO = vbo.VBO(np.reshape(colors,(1, -1)).astype(np.float32))
+
+    colors_edges = np.tile(np.array([0.5, 0.13, 0.13], dtype=np.float32), (5, 1))
+    colors_hovered = np.tile(np.array([1.0, 0.5, 0.0], dtype=np.float32), (5, 1))
+
+    vertices = np.array(
+        [[0.0, 0.0, 0.0],
+         [1.0, 0.0, 0.0],
+         [1.0, 0.0, 1.0],
+         [0.0, 0.0, 1.0],
+         [0.5, 1.0, 0.5]])
+    vertVBO = vbo.VBO(np.reshape(vertices,
+                                 (1, -1)).astype(np.float32))
+
+    indices_triangles = np.array(
+        [0, 1, 2,
+         0, 2, 3,
+         0, 1, 4,
+         1, 2, 4,
+         2, 3, 4,
+         3, 0, 4])
+
+    indices_quads = None
+
+    indices_edges = np.array(
+        [0, 1,
+         1, 2,
+         2, 3,
+         3, 0,
+         0, 4,
+         1, 4,
+         2, 4,
+         3, 4]
+    )
+
+    mesh = ObjectMesh(vertVBO, colorVBO, indices_triangles, indices_quads, indices_edges)
+
+    mesh.colorsEdgesVBO = vbo.VBO(colors_edges.flatten().astype(np.float32))
+    mesh.colorsHoveredVBO = vbo.VBO(colors_hovered.flatten().astype(np.float32))
+    mesh.colorsSelectedVBO = vbo.VBO(colors_hovered.flatten().astype(np.float32))
+    mesh.colorsEdgesActiveVBO = vbo.VBO(colors_edges.flatten().astype(np.float32))
+
+    mesh.enableFaces = True
+
+    collision = CollisionBox(glm.vec3([0.0, 0.0, 0.0]), glm.vec3([1.0, 1.0, 1.0]))
+    origin = np.array([0.5, 0.5, 0.5])
+
+    obj = SceneObject(mesh, collision, origin)
+    return obj
+
+
+def create_detector(id, x, y, z):
+    obj = create_pyramid()
+    obj.location = np.array([x, y, z])
+    obj.obj_type = "detector"
+    obj.data["id"] = id
+    return obj
+
+
+def create_event(x, y, z, event_type):
+    if event_type == "explosion":
+        clr = [1.0, 0.0, 0.0, 1.0]
+    else:
+        clr = [1.0, 0.7, 0.0, 1.0]
+    obj = create_sphere(32, 32, clr)
+    obj.location = np.array([x, y, z])
+    obj.obj_type = "event"
+    obj.data["type"] = event_type
+    return obj
+

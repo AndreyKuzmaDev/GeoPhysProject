@@ -9,13 +9,15 @@ OBJECT_COUNT = 0
 # TODO : create methods to update SceneObject fields and automatically recalculate matrix
 # OR : do something with matrices provided by OpenGL and make them work!!
 class SceneObject:
-    def __init__(self, mesh, collision, origin=np.array([0.0, 0.0, 0.0])):
+    def __init__(self, mesh, collision, origin=np.array([0.0, 0.0, 0.0]), obj_type="misc", data={}):
         self.enabled = True
         self.hover = False
 
         self.mesh = mesh
         self.collision = collision
         self.origin = origin
+        self.obj_type = obj_type
+        self.data = data.copy()
 
         self.scale = np.array([1.0, 1.0, 1.0])
         self.rotation = np.array([0.0, 0.0, 0.0])

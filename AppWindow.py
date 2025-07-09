@@ -3,6 +3,7 @@ import sys
 from PyQt5 import QtCore, QtWidgets  # core Qt functionality
 from PyQt5 import QtGui  # extends QtCore with GUI functionality
 import os
+import csv
 from PyQt5 import QtOpenGL
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
 
@@ -22,8 +23,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.initMenu()
         self.initToolBar()
 
-
-
         self.treeView = QtWidgets.QTreeView()
         self.model = QtGui.QStandardItemModel()
         self.model.setHorizontalHeaderLabels(["Открытые проекты"])
@@ -32,21 +31,32 @@ class MainWindow(QtWidgets.QMainWindow):
         self.initGUI()
         self.initTimer()
 
+
+
     def openProject(self):
         folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Выберите папку")
         if not folder_path:
             return
 
-
-        dxf_file = None
+        fx = lambda x : float(x.replace(',', '.'))
         for entry in os.listdir(folder_path):
             if entry.lower().endswith('.dxf'):
                 dxf_file = os.path.join(folder_path, entry)
-                break
+                self.glWidget.add_object_dxf(dxf_file)
+            elif entry == "detectors.csv":
+                csv_file = os.path.join(folder_path, entry)
+                with open(csv_file, newline='') as f:
+                    r = csv.reader(f, delimiter=';', quotechar='|')
+                    for row in r:
 
-        if dxf_file:
-            # Передать найденный dxf файл в функцию инициализации геометрии
-            self.glWidget._init_geometry(dxf_file)
+                        self.glWidget.add_object_detector(int(row[0]), fx(row[2]), fx(row[3]), fx(row[1]))
+            elif entry == "events.csv":
+                csv_file = os.path.join(folder_path, entry)
+                with open(csv_file, newline='') as f:
+                    r = csv.reader(f, delimiter=';', quotechar='|')
+                    for row in r:
+                        print(row)
+                        self.glWidget.add_object_event(fx(row[1]), fx(row[3]), fx(row[2]), row[-1], fx(row[5]))
 
         rootNode = self.model.invisibleRootItem()
         project_item = QtGui.QStandardItem(os.path.basename(folder_path))
